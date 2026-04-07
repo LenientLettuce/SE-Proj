@@ -10,7 +10,8 @@
 ```bash
 cd BackEnd
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate (For git)
+.\.venv\Scripts\Activate.ps1 (For windows)
 pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
