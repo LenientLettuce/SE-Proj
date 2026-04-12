@@ -181,7 +181,7 @@ class _AuthScreenState extends State<AuthScreen> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: _role,
+            initialValue: _role,
             decoration: const InputDecoration(labelText: 'Role'),
             items: const [
               DropdownMenuItem(value: 'customer', child: Text('Customer')),
@@ -494,7 +494,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: _paymentMethod,
+            initialValue: _paymentMethod,
             decoration: const InputDecoration(labelText: 'Payment method'),
             items: const [
               DropdownMenuItem(value: 'cod', child: Text('Cash on delivery')),
@@ -776,7 +776,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
             TextFormField(controller: _stock, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Stock'), validator: _required),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _category,
+              initialValue: _category,
               items: appState.categories.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
               onChanged: (v) => setState(() => _category = v ?? 'General'),
               decoration: const InputDecoration(labelText: 'Category'),

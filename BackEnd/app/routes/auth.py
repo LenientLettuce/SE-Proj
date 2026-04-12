@@ -9,7 +9,7 @@ from app.models.user import TokenResponse, UserCreate, UserLogin, UserPublic
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-
+#register - creates a new user account
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def register(payload: UserCreate):
     db = get_db()
@@ -34,7 +34,7 @@ def register(payload: UserCreate):
     token = create_access_token(str(result.inserted_id), {"role": payload.role})
     return TokenResponse(access_token=token, user=UserPublic(**user_doc))
 
-
+#login - authenticates user and returns JWT token
 @router.post("/login", response_model=TokenResponse)
 def login(payload: UserLogin):
     db = get_db()

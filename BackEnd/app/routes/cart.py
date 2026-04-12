@@ -7,7 +7,7 @@ from app.services.deps import require_roles
 
 router = APIRouter(prefix="/cart", tags=["cart"])
 
-
+# Converts raw cart document into response model
 def _cart_to_response(db, cart_doc) -> CartResponse:
     items: list[CartItemOut] = []
     total = 0.0
@@ -28,14 +28,14 @@ def _cart_to_response(db, cart_doc) -> CartResponse:
         )
     return CartResponse(items=items, total=total)
 
-
+#get cart - returns users current cart
 @router.get("", response_model=CartResponse)
 def get_cart(user=Depends(require_roles("customer", "admin"))):
     db = get_db()
     cart = db.carts.find_one({"user_id": user["_id"]}) or {"items": []}
     return _cart_to_response(db, cart)
 
-
+#add to cart - adds a product to the cart or updates quantity if already exists
 @router.post("/items", response_model=CartResponse)
 def add_to_cart(payload: CartItemIn, user=Depends(require_roles("customer", "admin"))):
     db = get_db()
@@ -61,7 +61,7 @@ def add_to_cart(payload: CartItemIn, user=Depends(require_roles("customer", "adm
     cart = db.carts.find_one({"user_id": user["_id"]})
     return _cart_to_response(db, cart)
 
-
+#remove from cart - removes a product from the cart
 @router.delete("/items/{product_id}", response_model=CartResponse)
 def remove_from_cart(product_id: str, user=Depends(require_roles("customer", "admin"))):
     db = get_db()

@@ -14,7 +14,7 @@ def _serialize(doc: dict) -> dict:
     doc["_id"] = str(doc["_id"])
     return doc
 
-
+#place order - converts cart into order, checks stock, reduces stock, clears cart
 @router.post("/checkout", response_model=OrderPublic, status_code=status.HTTP_201_CREATED)
 def checkout(payload: CheckoutRequest, user=Depends(require_roles("customer", "admin"))):
     db = get_db()
@@ -63,7 +63,7 @@ def checkout(payload: CheckoutRequest, user=Depends(require_roles("customer", "a
     order_doc["_id"] = str(result.inserted_id)
     return OrderPublic(**order_doc)
 
-
+#my orders - returns list of orders placed by the user
 @router.get("/me", response_model=list[OrderPublic])
 def my_orders(user=Depends(require_roles("customer", "admin"))):
     db = get_db()
@@ -80,7 +80,7 @@ def artisan_orders(user=Depends(require_roles("artisan", "admin"))):
             docs.append(OrderPublic(**_serialize(order)))
     return docs
 
-
+#update order status - allows artisan to update status of an order (e.g. pending -> in_progress -> completed)
 @router.patch("/{order_id}/status", response_model=OrderPublic)
 def update_order_status(order_id: str, payload: OrderStatusUpdate, user=Depends(require_roles("artisan", "admin"))):
     db = get_db()

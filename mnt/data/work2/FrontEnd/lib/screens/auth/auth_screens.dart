@@ -70,22 +70,22 @@ class RegisterScreen extends StatelessWidget {
                         TextStyle(color: Colors.grey.shade600, fontSize: 14)),
               ),
               const SizedBox(height: 28),
-              LabeledInput(
+              const LabeledInput(
                   label: 'Full Name',
                   hint: 'John Doe',
                   prefixIcon: Icons.person_outline),
               const SizedBox(height: 16),
-              LabeledInput(
+              const LabeledInput(
                   label: 'Email Address',
                   hint: 'name@example.com',
                   prefixIcon: Icons.email_outlined),
               const SizedBox(height: 16),
-              LabeledInput(
+              const LabeledInput(
                   label: 'Password',
                   obscureText: true,
                   prefixIcon: Icons.lock_outline),
               const SizedBox(height: 16),
-              LabeledInput(
+              const LabeledInput(
                   label: 'Confirm Password',
                   obscureText: true,
                   prefixIcon: Icons.lock_outline),
@@ -188,19 +188,19 @@ class ForgotPasswordScreen extends StatelessWidget {
               const SizedBox(height: 32),
               const LabeledInput(label: 'Enter Username'),
               const SizedBox(height: 16),
-              LabeledInput(
+              const LabeledInput(
                 label: 'Enter New Password',
                 hint: 'name@example.com',
                 prefixIcon: Icons.email_outlined,
-                suffix: const Icon(Icons.visibility_outlined,
+                suffix: Icon(Icons.visibility_outlined,
                     size: 18, color: Colors.grey),
               ),
               const SizedBox(height: 16),
-              LabeledInput(
+              const LabeledInput(
                 label: 'Re-enter New Password',
                 hint: 'Enter your password',
                 prefixIcon: Icons.lock_outline,
-                suffix: const Icon(Icons.visibility_outlined,
+                suffix: Icon(Icons.visibility_outlined,
                     size: 18, color: Colors.grey),
               ),
               const SizedBox(height: 24),
