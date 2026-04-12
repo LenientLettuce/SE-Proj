@@ -15,7 +15,7 @@ class ImageUploadService {
     final uri = Uri.parse('$baseUrl/api/v1/uploads/image');
     final request = http.MultipartRequest('POST', uri)
       ..headers.addAll({
-        if (token != null && token!.isNotEmpty) 'Authorization': 'Bearer $token!',
+        if (token != null && token!.isNotEmpty) 'Authorization': 'Bearer $token',
       });
 
     final mimeType = lookupMimeType(file.path) ?? 'image/jpeg';

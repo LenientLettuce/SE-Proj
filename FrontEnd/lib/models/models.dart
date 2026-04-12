@@ -6,6 +6,7 @@ class UserModel {
   final String? phone;
   final String? address;
   final String? city;
+  final String? postalCode;
 
   UserModel({
     required this.id,
@@ -15,16 +16,18 @@ class UserModel {
     this.phone,
     this.address,
     this.city,
+    this.postalCode,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
         id: (json['_id'] ?? json['id'] ?? '').toString(),
-        fullName: (json['full_name'] ?? '').toString(),
+        fullName: (json['full_name'] ?? json['name'] ?? '').toString(),
         email: (json['email'] ?? '').toString(),
         role: (json['role'] ?? 'customer').toString(),
-        phone: json['phone']?.toString(),
+        phone: (json['phone'] ?? json['phoneNumber'])?.toString(),
         address: json['address']?.toString(),
         city: json['city']?.toString(),
+        postalCode: json['postalCode']?.toString(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -35,7 +38,14 @@ class UserModel {
         'phone': phone,
         'address': address,
         'city': city,
+        'postalCode': postalCode,
       };
+
+  // Compatibility for older screens
+  String get name => fullName;
+  String get bio => 'No bio provided.';
+  String get badge => 'New Member';
+  String? get phoneNumber => phone;
 }
 
 class Product {
@@ -49,6 +59,14 @@ class Product {
   final String category;
   final String imageUrl;
   final bool isActive;
+  
+  // Additional fields for UI compatibility
+  final double rating;
+  final int reviewCount;
+  final String currency;
+  final List<String> sizes;
+  final List<String> categories;
+  final String shopId;
 
   Product({
     required this.id,
@@ -61,6 +79,12 @@ class Product {
     required this.category,
     required this.imageUrl,
     required this.isActive,
+    this.rating = 4.5,
+    this.reviewCount = 0,
+    this.currency = 'Rs. ',
+    this.sizes = const ['S', 'M', 'L'],
+    this.categories = const [],
+    this.shopId = '',
   });
 
   factory Product.fromJson(Map<String, dynamic> json) => Product(
@@ -74,6 +98,12 @@ class Product {
         category: (json['category'] ?? 'General').toString(),
         imageUrl: (json['image_url'] ?? '').toString(),
         isActive: (json['is_active'] ?? true) as bool,
+        rating: ((json['rating'] ?? 4.5) as num).toDouble(),
+        reviewCount: (json['review_count'] ?? 0) as int,
+        currency: (json['currency'] ?? 'Rs. ').toString(),
+        sizes: (json['sizes'] as List?)?.map((e) => e.toString()).toList() ?? const ['S', 'M', 'L'],
+        categories: (json['categories'] as List?)?.map((e) => e.toString()).toList() ?? [],
+        shopId: (json['shop_id'] ?? '').toString(),
       );
 }
 
@@ -204,4 +234,153 @@ class AdminDashboard {
         orders: (json['orders'] ?? 0) as int,
         revenue: ((json['revenue'] ?? 0) as num).toDouble(),
       );
+}
+
+class Shop {
+  final String id;
+  final String name;
+  final String imageUrl;
+  final String ownerImageUrl;
+  final String bio;
+
+  Shop({
+    required this.id,
+    required this.name,
+    required this.imageUrl,
+    required this.ownerImageUrl,
+    required this.bio,
+  });
+}
+
+class Review {
+  final String title;
+  final double rating;
+  final String userName;
+  final DateTime date;
+  final String comment;
+
+  Review({
+    required this.title,
+    required this.rating,
+    required this.userName,
+    required this.date,
+    required this.comment,
+  });
+}
+
+class Order {
+  final String id;
+  final DateTime date;
+  final String status;
+  final String deliveryStatus;
+  final double progress;
+
+  Order({
+    required this.id,
+    required this.date,
+    required this.status,
+    required this.deliveryStatus,
+    required this.progress,
+  });
+}
+
+class SampleData {
+  static final currentUser = UserModel(
+    id: '1',
+    fullName: 'Julian Rivers',
+    email: 'julian@example.com',
+    role: 'Artisan',
+    phone: '+1 234 567 890',
+    address: '123 Artisan Lane',
+    city: 'Craftsville',
+    postalCode: '12345',
+  );
+
+  static final categories = ['Rugs', 'Crockery', 'Mugs', 'Wall Art'];
+
+  static final products = [
+    Product(
+      id: 'p1',
+      artisanId: 'a1',
+      artisanName: 'Artisan 1',
+      name: 'Red Persian Rug',
+      description: 'A beautiful hand-woven red Persian rug.',
+      price: 70000,
+      stock: 5,
+      category: 'Rugs',
+      imageUrl: 'https://images.unsplash.com/photo-1600166898405-da9535204843?w=400',
+      isActive: true,
+      rating: 4.8,
+      reviewCount: 12,
+      categories: ['Rugs'],
+      shopId: 's1',
+    ),
+    Product(
+      id: 'p2',
+      artisanId: 'a2',
+      artisanName: 'Artisan 2',
+      name: 'Crockery Set',
+      description: 'Elegant ceramic crockery set.',
+      price: 10000,
+      stock: 10,
+      category: 'Crockery',
+      imageUrl: 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=400',
+      isActive: true,
+      rating: 4.5,
+      reviewCount: 8,
+      categories: ['Crockery'],
+      shopId: 's2',
+    ),
+  ];
+
+  static final shops = [
+    Shop(
+      id: 's1',
+      name: 'Persian Weaves',
+      imageUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400',
+      ownerImageUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100',
+      bio: 'Authentic hand-woven rugs from the heart of Persia.',
+    ),
+    Shop(
+      id: 's2',
+      name: 'Ceramic Haven',
+      imageUrl: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',
+      ownerImageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
+      bio: 'Handcrafted ceramics for your modern home.',
+    ),
+  ];
+
+  static final reviews = [
+    Review(
+      title: 'Excellent Quality',
+      rating: 5,
+      userName: 'Jane Cooper',
+      date: DateTime.now().subtract(const Duration(days: 2)),
+      comment: 'Loved it!! Ordering Again!!',
+    ),
+    Review(
+      title: 'Beautiful Design',
+      rating: 4.5,
+      userName: 'James Harrid',
+      date: DateTime.now().subtract(const Duration(days: 5)),
+      comment: 'Slightly Late Delivery, but Loved it...',
+    ),
+  ];
+
+  static final orders = [
+    Order(
+      id: 'ORD123',
+      date: DateTime.now().subtract(const Duration(days: 1)),
+      status: 'In Progress',
+      deliveryStatus: 'On its way',
+      progress: 0.6,
+    ),
+    Order(
+      id: 'ORD456',
+      date: DateTime.now().subtract(const Duration(days: 3)),
+      status: 'Completed',
+      deliveryStatus: 'Delivered',
+      progress: 1.0,
+    ),
+  ];
 }
