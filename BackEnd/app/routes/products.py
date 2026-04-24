@@ -16,15 +16,25 @@ def _serialize(doc: dict) -> dict:
 
 
 @router.get("", response_model=ProductListResponse)
-def list_products(search: str | None = None, category: str | None = None, limit: int = Query(default=20, le=100)):
+def list_products(
+    search: str | None = None,
+    category: str | None = None,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, le=100),
+):
     db = get_db()
     query: dict = {"is_active": True}
     if category:
         query["category"] = category
     if search:
-        query["name"] = {"$regex": search, "$options": "i"}
-    docs = [_serialize(x) for x in db.products.find(query).limit(limit)]
-    return ProductListResponse(items=[ProductPublic(**d) for d in docs], total=len(docs))
+        # Use text search if index exists, else fallback to regex
+        query["$text"] = {"$search": search}
+
+    cursor = db.products.find(query)
+    total = db.products.count_documents(query)
+    docs = [_serialize(x) for x in cursor.skip(skip).limit(limit)]
+
+    return ProductListResponse(items=[ProductPublic(**d) for d in docs], total=total)
 
 
 @router.get("/{product_id}", response_model=ProductPublic)

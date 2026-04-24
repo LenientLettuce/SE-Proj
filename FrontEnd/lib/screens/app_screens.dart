@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../models/models.dart';
 import '../state/app_state.dart';
+import 'buyer/product_screens.dart';
 
 class RootScreen extends StatelessWidget {
   const RootScreen({super.key});
@@ -312,25 +314,33 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     subtitle: Text('${product.category} • ${product.artisanName}\nStock: ${product.stock}'),
                     isThreeLine: true,
                     trailing: Column(
+                      mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text('Rs ${product.price.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 6),
-                        OutlinedButton(
-                          onPressed: product.stock <= 0
-                              ? null
-                              : () async {
-                                  try {
-                                    await context.read<AppState>().addToCart(product);
-                                    if (!context.mounted) return;
-                                    _showSnack(context, '${product.name} added to cart');
-                                  } catch (e) {
-                                    if (!context.mounted) return;
-                                    _showSnack(context, e.toString().replaceFirst('Exception: ', ''));
-                                  }
-                                },
-                          child: const Text('Add'),
+                        const SizedBox(height: 2),
+                        SizedBox(
+                          height: 28,
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            onPressed: product.stock <= 0
+                                ? null
+                                : () async {
+                                    try {
+                                      await context.read<AppState>().addToCart(product);
+                                      if (!context.mounted) return;
+                                      _showSnack(context, '${product.name} added to cart');
+                                    } catch (e) {
+                                      if (!context.mounted) return;
+                                      _showSnack(context, e.toString().replaceFirst('Exception: ', ''));
+                                    }
+                                  },
+                            child: const Text('Add'),
+                          ),
                         )
                       ],
                     ),
@@ -611,7 +621,7 @@ class _ArtisanHomeScreenState extends State<ArtisanHomeScreen> with SingleTicker
         bottom: TabBar(controller: _controller, tabs: const [Tab(text: 'Products'), Tab(text: 'Orders')]),
         actions: [
           IconButton(
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductFormScreen())),
+            onPressed: () => Navigator.pushNamed(context, '/edit-product'),
             icon: const Icon(Icons.add_box_outlined),
           ),
           IconButton(onPressed: () => context.read<AppState>().logout(), icon: const Icon(Icons.logout)),
@@ -645,7 +655,7 @@ class ArtisanProductsTab extends StatelessWidget {
                     trailing: PopupMenuButton<String>(
                       onSelected: (value) async {
                         if (value == 'edit') {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => ProductFormScreen(product: product)));
+                          Navigator.pushNamed(context, '/edit-product', arguments: product);
                         } else {
                           await context.read<AppState>().deleteProduct(product.id);
                         }
@@ -713,163 +723,6 @@ class ArtisanOrdersTab extends StatelessWidget {
               .toList(),
     );
   }
-}
-
-class ProductFormScreen extends StatefulWidget {
-  const ProductFormScreen({super.key, this.product});
-
-  final Product? product;
-
-  @override
-  State<ProductFormScreen> createState() => _ProductFormScreenState();
-}
-
-class _ProductFormScreenState extends State<ProductFormScreen> {
-  final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _name;
-  late final TextEditingController _description;
-  late final TextEditingController _price;
-  late final TextEditingController _stock;
-  late final TextEditingController _imageUrl;
-  final ImagePicker _picker = ImagePicker();
-  String _category = 'General';
-  XFile? _selectedImage;
-
-  @override
-  void initState() {
-    super.initState();
-    final product = widget.product;
-    _name = TextEditingController(text: product?.name ?? '');
-    _description = TextEditingController(text: product?.description ?? '');
-    _price = TextEditingController(text: product == null ? '' : product.price.toString());
-    _stock = TextEditingController(text: product == null ? '' : product.stock.toString());
-    _imageUrl = TextEditingController(text: product?.imageUrl ?? '');
-    _category = product?.category ?? 'General';
-  }
-
-  @override
-  void dispose() {
-    _name.dispose();
-    _description.dispose();
-    _price.dispose();
-    _stock.dispose();
-    _imageUrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final appState = context.watch<AppState>();
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.product == null ? 'Add Product' : 'Edit Product')),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            TextFormField(controller: _name, decoration: const InputDecoration(labelText: 'Product name'), validator: _required),
-            const SizedBox(height: 12),
-            TextFormField(controller: _description, maxLines: 4, decoration: const InputDecoration(labelText: 'Description'), validator: _required),
-            const SizedBox(height: 12),
-            TextFormField(controller: _price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Price'), validator: _required),
-            const SizedBox(height: 12),
-            TextFormField(controller: _stock, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Stock'), validator: _required),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: _category,
-              items: appState.categories.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-              onChanged: (v) => setState(() => _category = v ?? 'General'),
-              decoration: const InputDecoration(labelText: 'Category'),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(controller: _imageUrl, decoration: const InputDecoration(labelText: 'Image URL (optional if you upload below)')),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: appState.isUploadingImage ? null : _pickAndUploadImage,
-              icon: const Icon(Icons.upload_file),
-              label: Text(appState.isUploadingImage ? 'Uploading image...' : (_selectedImage == null ? 'Pick product image' : 'Replace product image')),
-            ),
-            if (_imageUrl.text.trim().isNotEmpty) ...[
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  _imageUrl.text.trim(),
-                  height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 180,
-                    color: Colors.grey.shade200,
-                    alignment: Alignment.center,
-                    child: const Text('Image preview unavailable'),
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: () async {
-                if (!_formKey.currentState!.validate()) return;
-                try {
-                  if (_imageUrl.text.trim().isEmpty) {
-                    _showSnack(context, 'Please upload an image or paste an image URL');
-                    return;
-                  }
-                  if (widget.product == null) {
-                    await context.read<AppState>().createProduct(
-                          name: _name.text.trim(),
-                          description: _description.text.trim(),
-                          price: double.parse(_price.text.trim()),
-                          stock: int.parse(_stock.text.trim()),
-                          category: _category,
-                          imageUrl: _imageUrl.text.trim(),
-                        );
-                  } else {
-                    await context.read<AppState>().updateProduct(
-                          id: widget.product!.id,
-                          name: _name.text.trim(),
-                          description: _description.text.trim(),
-                          price: double.parse(_price.text.trim()),
-                          stock: int.parse(_stock.text.trim()),
-                          category: _category,
-                          imageUrl: _imageUrl.text.trim(),
-                        );
-                  }
-                  if (!context.mounted) return;
-                  Navigator.pop(context);
-                } catch (e) {
-                  if (!context.mounted) return;
-                  _showSnack(context, e.toString().replaceFirst('Exception: ', ''));
-                }
-              },
-              child: Text(widget.product == null ? 'Create product' : 'Save changes'),
-            )
-          ],
-        ),
-      ),
-    );
-  }
-
-
-
-  Future<void> _pickAndUploadImage() async {
-    try {
-      final file = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
-      if (file == null || !mounted) return;
-      setState(() => _selectedImage = file);
-      final uploadedUrl = await context.read<AppState>().uploadProductImage(file);
-      _imageUrl.text = uploadedUrl;
-      if (!mounted) return;
-      _showSnack(context, 'Image uploaded');
-      setState(() {});
-    } catch (e) {
-      if (!mounted) return;
-      _showSnack(context, e.toString().replaceFirst('Exception: ', ''));
-    }
-  }
-
-  String? _required(String? value) => (value == null || value.trim().isEmpty) ? 'Required' : null;
 }
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -966,9 +819,17 @@ class _ProductThumb extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.grey.shade200,
         borderRadius: BorderRadius.circular(10),
-        image: imageUrl.isEmpty ? null : DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover),
       ),
-      child: imageUrl.isEmpty ? const Icon(Icons.image_outlined) : null,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: imageUrl.isEmpty
+            ? const Icon(Icons.image_outlined)
+            : CachedNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.cover,
+                errorWidget: (_, __, ___) => const Icon(Icons.broken_image),
+              ),
+      ),
     );
   }
 }

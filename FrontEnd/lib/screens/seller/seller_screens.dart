@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/widgets.dart';
 import '../../models/models.dart';
+import 'dart:io';
 
 // ── Finances Screen ───────────────────────────────────────────────────────────
 class FinancesScreen extends StatefulWidget {
@@ -613,159 +617,245 @@ class EditProductScreen extends StatefulWidget {
 }
 
 class _EditProductScreenState extends State<EditProductScreen> {
-  final List<String> _categories = ['Hand Sewn', 'Woolen Goods', 'Luxury'];
-  int _selectedColor = 1;
-  final colors = [const Color(0xFF8B6914), AppTheme.primaryRed, const Color(0xFFF5DEB3)];
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _nameController;
+  late TextEditingController _descController;
+  late TextEditingController _priceController;
+  late TextEditingController _stockController;
+  late String _category;
+  
+  List<String> _imageUrls = [];
+  final List<XFile> _newImages = [];
+
   bool get isEdit => widget.product != null;
 
   @override
-  Widget build(BuildContext context) {
+  void initState() {
+    super.initState();
     final p = widget.product;
+    _nameController = TextEditingController(text: p?.name ?? '');
+    _descController = TextEditingController(text: p?.description ?? '');
+    _priceController = TextEditingController(text: p?.price.toString() ?? '');
+    _stockController = TextEditingController(text: p?.stock.toString() ?? '1');
+    _category = p?.category ?? 'General';
+    _imageUrls = List.from(p?.imageUrls ?? []);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descController.dispose();
+    _priceController.dispose();
+    _stockController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final images = await picker.pickMultiImage(imageQuality: 80);
+    if (images.isNotEmpty) {
+      setState(() {
+        _newImages.addAll(images);
+      });
+    }
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_imageUrls.isEmpty && _newImages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select at least one image')),
+      );
+      return;
+    }
+
+    final state = context.read<AppState>();
+    try {
+      List<String> finalUrls = List.from(_imageUrls);
+      
+      // Upload new images
+      for (var file in _newImages) {
+        final url = await state.uploadProductImage(file);
+        finalUrls.add(url);
+      }
+
+      if (isEdit) {
+        await state.updateProduct(
+          id: widget.product!.id,
+          name: _nameController.text,
+          description: _descController.text,
+          price: double.parse(_priceController.text),
+          stock: int.parse(_stockController.text),
+          category: _category,
+          imageUrls: finalUrls,
+        );
+      } else {
+        await state.createProduct(
+          name: _nameController.text,
+          description: _descController.text,
+          price: double.parse(_priceController.text),
+          stock: int.parse(_stockController.text),
+          category: _category,
+          imageUrls: finalUrls,
+        );
+      }
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEdit ? (p?.name ?? 'Product') : 'Product Name',
-            style: const TextStyle(fontSize: 14)),
-        leadingWidth: 40,
-        actions: [
-          const Icon(Icons.shopping_cart_outlined, size: 22),
-          const SizedBox(width: 8),
-          Container(
-            width: 32, height: 32,
-            margin: const EdgeInsets.only(right: 8),
-            decoration: const BoxDecoration(shape: BoxShape.circle),
-            child: ClipOval(
-              child: Image.network('https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100', fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade300, child: const Icon(Icons.person, size: 16))),
-            ),
-          ),
-        ],
+        title: Text(isEdit ? 'Edit Product' : 'Add Product'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Photo upload area
-            GestureDetector(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Stack(
-                  alignment: Alignment.center,
+      body: state.isBusy
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Image.network(
-                      p?.imageUrl ?? 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400',
-                      width: double.infinity, height: 200, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(height: 200, color: Colors.grey.shade200),
+                    const Text('Product Images', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 120,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          GestureDetector(
+                            onTap: _pickImage,
+                            child: Container(
+                              width: 120,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[200],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey[300]!),
+                              ),
+                              child: const Icon(Icons.add_a_photo, size: 40, color: Colors.grey),
+                            ),
+                          ),
+                          ..._imageUrls.map((url) => _ImageThumbnail(
+                                url: url,
+                                onRemove: () => setState(() => _imageUrls.remove(url)),
+                              )),
+                          ..._newImages.map((file) => _ImageThumbnail(
+                                file: file,
+                                onRemove: () => setState(() => _newImages.remove(file)),
+                              )),
+                        ],
+                      ),
                     ),
-                    Container(
-                      color: Colors.black38,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                      child: Column(children: [
-                        Text(isEdit ? 'Edit Photos' : 'Upload Photos',
-                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
-                        const Icon(Icons.arrow_upward, color: Colors.white),
-                      ]),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(labelText: 'Product Name', border: OutlineInputBorder()),
+                      validator: (v) => v == null || v.isEmpty ? 'Required' : null,
                     ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _descController,
+                      decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
+                      maxLines: 3,
+                      validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _priceController,
+                            decoration: const InputDecoration(labelText: 'Price', border: OutlineInputBorder(), prefixText: 'Rs. '),
+                            keyboardType: TextInputType.number,
+                            validator: (v) => v == null || double.tryParse(v) == null ? 'Invalid price' : null,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _stockController,
+                            decoration: const InputDecoration(labelText: 'Stock', border: OutlineInputBorder()),
+                            keyboardType: TextInputType.number,
+                            validator: (v) => v == null || int.tryParse(v) == null ? 'Invalid stock' : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: state.categories.contains(_category) ? _category : state.categories.first,
+                      decoration: const InputDecoration(labelText: 'Category', border: OutlineInputBorder()),
+                      items: state.categories
+                          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                          .toList(),
+                      onChanged: (v) => setState(() => _category = v!),
+                    ),
+                    const SizedBox(height: 32),
+                    if (state.isUploadingImage)
+                      const Center(child: Column(
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 8),
+                          Text('Uploading images...'),
+                        ],
+                      ))
+                    else
+                      RedButton(
+                        label: isEdit ? 'Update Product' : 'Create Product',
+                        onPressed: _save,
+                      ),
+                    const SizedBox(height: 40),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 6),
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(4, (i) =>
-              Container(width: i == 0 ? 20 : 8, height: 8, margin: const EdgeInsets.symmetric(horizontal: 2),
-                  decoration: BoxDecoration(color: i == 0 ? Colors.grey.shade400 : Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(4))))),
-            const SizedBox(height: 16),
+    );
+  }
+}
 
-            // Price + Colors
-            Row(
-              children: [
-                GestureDetector(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(color: AppTheme.primaryRed, borderRadius: BorderRadius.circular(8)),
-                    child: Row(children: [
-                      Text(p != null ? '\$${p.price.toStringAsFixed(0)}' : '\$Price',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-                      const SizedBox(width: 6),
-                      const Icon(Icons.edit, color: Colors.white, size: 14),
-                    ]),
-                  ),
-                ),
-                const Spacer(),
-                const Text('Colors', style: TextStyle(fontWeight: FontWeight.w600)),
-                const SizedBox(width: 8),
-                const Icon(Icons.add, color: AppTheme.primaryRed),
-                const SizedBox(width: 8),
-                Row(children: List.generate(colors.length, (i) => GestureDetector(
-                  onTap: () => setState(() => _selectedColor = i),
-                  child: Container(
-                    width: 24, height: 24, margin: const EdgeInsets.only(left: 4),
-                    decoration: BoxDecoration(
-                      color: colors[i],
-                      shape: BoxShape.circle,
-                      border: Border.all(color: _selectedColor == i ? Colors.black : Colors.transparent, width: 1.5),
-                    ),
-                  ),
-                ))),
-              ],
-            ),
-            const SizedBox(height: 16),
+class _ImageThumbnail extends StatelessWidget {
+  final String? url;
+  final XFile? file;
+  final VoidCallback onRemove;
 
-            // Description
-            const Row(children: [
-              Text('Description', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-              SizedBox(width: 8),
-              Icon(Icons.edit_outlined, size: 16, color: Colors.grey),
-            ]),
-            const SizedBox(height: 8),
-            TextFormField(
-              initialValue: p?.description ?? 'Add Description..',
-              maxLines: 3,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-                contentPadding: const EdgeInsets.all(12),
+  const _ImageThumbnail({this.url, this.file, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 120,
+      margin: const EdgeInsets.only(left: 12),
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: file != null
+                ? Image.file(File(file!.path), width: 120, height: 120, fit: BoxFit.cover)
+                : Image.network(url!, width: 120, height: 120, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image)),
+          ),
+          Positioned(
+            right: 4,
+            top: 4,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                child: const Icon(Icons.close, size: 16, color: Colors.white),
               ),
             ),
-            const SizedBox(height: 16),
-
-            // Add Categories
-            RedButton(
-              label: '+ Add Categories',
-              onPressed: () {},
-            ),
-            const SizedBox(height: 12),
-
-            // Category chips
-            ..._categories.map((cat) => Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(cat, style: const TextStyle(fontSize: 14)),
-                  GestureDetector(
-                    onTap: () => setState(() => _categories.remove(cat)),
-                    child: Icon(Icons.delete_outline, color: Colors.grey.shade600),
-                  ),
-                ],
-              ),
-            )),
-            const SizedBox(height: 16),
-
-            RedButton(
-              label: isEdit ? 'Save' : 'Upload',
-              onPressed: () => Navigator.pop(context),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

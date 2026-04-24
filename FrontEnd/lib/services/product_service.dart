@@ -25,7 +25,7 @@ class ProductService {
     required double price,
     required int stock,
     required String category,
-    required String imageUrl,
+    required List<String> imageUrls,
   }) async {
     final data = await api.postJson('/api/v1/products', {
       'name': name,
@@ -33,7 +33,7 @@ class ProductService {
       'price': price,
       'stock': stock,
       'category': category,
-      'image_url': imageUrl,
+      'image_urls': imageUrls,
     });
     return Product.fromJson(data);
   }
@@ -45,7 +45,7 @@ class ProductService {
     required double price,
     required int stock,
     required String category,
-    required String imageUrl,
+    required List<String> imageUrls,
   }) async {
     final data = await api.putJson('/api/v1/products/$id', {
       'name': name,
@@ -53,7 +53,7 @@ class ProductService {
       'price': price,
       'stock': stock,
       'category': category,
-      'image_url': imageUrl,
+      'image_urls': imageUrls,
     });
     return Product.fromJson(data);
   }

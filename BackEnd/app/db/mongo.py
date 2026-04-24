@@ -14,4 +14,9 @@ def get_client() -> MongoClient:
 
 
 def get_db() -> Database:
-    return get_client()[settings.mongo_db]
+    db = get_client()[settings.mongo_db]
+    # Ensure indexes for performance
+    db.products.create_index([("name", "text"), ("description", "text")])
+    db.products.create_index("category")
+    db.products.create_index("is_active")
+    return db
