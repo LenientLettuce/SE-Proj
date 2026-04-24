@@ -9,7 +9,7 @@ class ProductCreate(BaseModel):
     price: float = Field(ge=0)
     stock: int = Field(ge=0)
     category: str
-    image_url: str | None = None
+    image_urls: list[str] = Field(default_factory=list)
 
 
 class ProductUpdate(BaseModel):
@@ -18,7 +18,7 @@ class ProductUpdate(BaseModel):
     price: float | None = Field(default=None, ge=0)
     stock: int | None = Field(default=None, ge=0)
     category: str | None = None
-    image_url: str | None = None
+    image_urls: list[str] | None = None
     is_active: bool | None = None
 
 
@@ -30,7 +30,7 @@ class ProductInDB(MongoBaseModel, TimestampedModel):
     price: float
     stock: int
     category: str
-    image_url: str | None = None
+    image_urls: list[str] = Field(default_factory=list)
     is_active: bool = True
 
 

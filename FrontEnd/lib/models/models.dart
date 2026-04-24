@@ -57,7 +57,7 @@ class Product {
   final double price;
   final int stock;
   final String category;
-  final String imageUrl;
+  final List<String> imageUrls;
   final bool isActive;
   
   // Additional fields for UI compatibility
@@ -77,7 +77,7 @@ class Product {
     required this.price,
     required this.stock,
     required this.category,
-    required this.imageUrl,
+    required this.imageUrls,
     required this.isActive,
     this.rating = 4.5,
     this.reviewCount = 0,
@@ -87,24 +87,45 @@ class Product {
     this.shopId = '',
   });
 
-  factory Product.fromJson(Map<String, dynamic> json) => Product(
-        id: (json['_id'] ?? '').toString(),
-        artisanId: (json['artisan_id'] ?? '').toString(),
-        artisanName: (json['artisan_name'] ?? '').toString(),
-        name: (json['name'] ?? '').toString(),
-        description: (json['description'] ?? '').toString(),
-        price: ((json['price'] ?? 0) as num).toDouble(),
-        stock: (json['stock'] ?? 0) as int,
-        category: (json['category'] ?? 'General').toString(),
-        imageUrl: (json['image_url'] ?? '').toString(),
-        isActive: (json['is_active'] ?? true) as bool,
-        rating: ((json['rating'] ?? 4.5) as num).toDouble(),
-        reviewCount: (json['review_count'] ?? 0) as int,
-        currency: (json['currency'] ?? 'Rs. ').toString(),
-        sizes: (json['sizes'] as List?)?.map((e) => e.toString()).toList() ?? const ['S', 'M', 'L'],
-        categories: (json['categories'] as List?)?.map((e) => e.toString()).toList() ?? [],
-        shopId: (json['shop_id'] ?? '').toString(),
-      );
+  String get imageUrl => imageUrls.isNotEmpty ? imageUrls.first : '';
+
+  factory Product.fromJson(Map<String, dynamic> json) {
+    List<String> urls = [];
+    if (json['image_urls'] != null) {
+      urls = List<String>.from(json['image_urls']);
+    } else if (json['image_url'] != null && json['image_url'].toString().isNotEmpty) {
+      urls = [json['image_url'].toString()];
+    }
+
+    return Product(
+      id: (json['_id'] ?? '').toString(),
+      artisanId: (json['artisan_id'] ?? '').toString(),
+      artisanName: (json['artisan_name'] ?? '').toString(),
+      name: (json['name'] ?? '').toString(),
+      description: (json['description'] ?? '').toString(),
+      price: ((json['price'] ?? 0) as num).toDouble(),
+      stock: (json['stock'] ?? 0) as int,
+      category: (json['category'] ?? 'General').toString(),
+      imageUrls: urls,
+      isActive: (json['is_active'] ?? true) as bool,
+      rating: ((json['rating'] ?? 4.5) as num).toDouble(),
+      reviewCount: (json['review_count'] ?? 0) as int,
+      currency: (json['currency'] ?? 'Rs. ').toString(),
+      sizes: (json['sizes'] as List?)?.map((e) => e.toString()).toList() ?? const ['S', 'M', 'L'],
+      categories: (json['categories'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      shopId: (json['shop_id'] ?? '').toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'description': description,
+    'price': price,
+    'stock': stock,
+    'category': category,
+    'image_urls': imageUrls,
+    'is_active': isActive,
+  };
 }
 
 class CartItem {
@@ -308,7 +329,7 @@ class SampleData {
       price: 70000,
       stock: 5,
       category: 'Rugs',
-      imageUrl: 'https://images.unsplash.com/photo-1600166898405-da9535204843?w=400',
+      imageUrls: ['https://images.unsplash.com/photo-1600166898405-da9535204843?w=400'],
       isActive: true,
       rating: 4.8,
       reviewCount: 12,
@@ -324,7 +345,7 @@ class SampleData {
       price: 10000,
       stock: 10,
       category: 'Crockery',
-      imageUrl: 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=400',
+      imageUrls: ['https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=400'],
       isActive: true,
       rating: 4.5,
       reviewCount: 8,

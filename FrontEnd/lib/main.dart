@@ -34,7 +34,10 @@ class ArtisansMarketplaceApp extends StatelessWidget {
           '/finances': (context) => const FinancesScreen(),
           '/manage-orders': (context) => const ManageOrdersScreen(),
           '/reviews': (context) => const ReviewsScreen(),
-          '/edit-product': (context) => const EditProductScreen(),
+          '/edit-product': (context) {
+            final product = ModalRoute.of(context)?.settings.arguments as Product?;
+            return EditProductScreen(product: product);
+          },
           '/profile': (context) => const ProfileScreen(),
           '/profile-account': (context) => const AccountSecurityScreen(),
           '/profile-contact': (context) => const ContactDetailsScreen(),

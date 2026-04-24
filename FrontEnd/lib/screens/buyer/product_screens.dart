@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/widgets.dart';
 import '../../models/models.dart';
@@ -14,11 +15,11 @@ class ProductDetailScreen extends StatefulWidget {
 }
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
-  int _qty = 2;
+  int _qty = 1;
   String _selectedSize = 'M';
   int _selectedColor = 1;
+  int _currentImageIndex = 0;
 
-  
   @override
   Widget build(BuildContext context) {
     final p = widget.product;
@@ -39,36 +40,79 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Main image
-            Image.network(p.imageUrl,
-                width: double.infinity,
-                height: 240,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) =>
-                    Container(height: 240, color: Colors.grey.shade200)),
+            // Image Gallery
+            SizedBox(
+              height: 300,
+              child: Stack(
+                children: [
+                  PageView.builder(
+                    itemCount: p.imageUrls.length,
+                    onPageChanged: (index) => setState(() => _currentImageIndex = index),
+                    itemBuilder: (context, index) => CachedNetworkImage(
+                      imageUrl: p.imageUrls[index],
+                      width: double.infinity,
+                      height: 300,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(color: Colors.grey[200]),
+                      errorWidget: (context, url, error) => Container(color: Colors.grey[200], child: const Icon(Icons.error)),
+                    ),
+                  ),
+                  if (p.imageUrls.length > 1)
+                    Positioned(
+                      bottom: 16,
+                      left: 0,
+                      right: 0,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          p.imageUrls.length,
+                          (index) => Container(
+                            width: 8,
+                            height: 8,
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _currentImageIndex == index ? AppTheme.primaryRed : Colors.white70,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
 
             // Thumbnail row
-            if (p.categories.contains('Rugs'))
+            if (p.imageUrls.length > 1)
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: List.generate(
-                      4,
-                      (i) => Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: Image.network(p.imageUrl,
-                                  width: 72,
-                                  height: 56,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(
-                                      width: 72,
-                                      height: 56,
-                                      color: Colors.grey.shade200)),
-                            ),
-                          )),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: SizedBox(
+                  height: 60,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: p.imageUrls.length,
+                    itemBuilder: (context, index) => GestureDetector(
+                      onTap: () => setState(() => _currentImageIndex = index),
+                      child: Container(
+                        width: 60,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: _currentImageIndex == index ? AppTheme.primaryRed : Colors.transparent,
+                            width: 2,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: CachedNetworkImage(
+                            imageUrl: p.imageUrls[index],
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
 
@@ -296,32 +340,46 @@ class SellerProductDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Image.network(p.imageUrl,
-                width: double.infinity,
-                height: 240,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) =>
-                    Container(height: 240, color: Colors.grey.shade200)),
-            if (p.categories.contains('Rugs'))
+            // Image Gallery
+            SizedBox(
+              height: 300,
+              child: Stack(
+                children: [
+                  PageView.builder(
+                    itemCount: p.imageUrls.length,
+                    itemBuilder: (context, index) => CachedNetworkImage(
+                      imageUrl: p.imageUrls[index],
+                      width: double.infinity,
+                      height: 300,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(color: Colors.grey[200]),
+                      errorWidget: (context, url, error) => Container(color: Colors.grey[200], child: const Icon(Icons.error)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (p.imageUrls.length > 1)
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                    children: List.generate(
-                        4,
-                        (i) => Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(6),
-                                  child: Image.network(p.imageUrl,
-                                      width: 72,
-                                      height: 56,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Container(
-                                          width: 72,
-                                          height: 56,
-                                          color: Colors.grey.shade200))),
-                            ))),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: SizedBox(
+                  height: 60,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: p.imageUrls.length,
+                    itemBuilder: (context, index) => Container(
+                      width: 60,
+                      margin: const EdgeInsets.only(right: 8),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: CachedNetworkImage(
+                          imageUrl: p.imageUrls[index],
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             Padding(
               padding: const EdgeInsets.all(16),

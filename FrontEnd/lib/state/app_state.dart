@@ -147,17 +147,20 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> refreshAll() async {
-    await loadProducts();
+    final tasks = <Future<void>>[loadProducts()];
+
     if (isCustomer) {
-      await refreshCart();
-      await loadMyOrders();
+      tasks.add(refreshCart());
+      tasks.add(loadMyOrders());
     }
     if (isArtisan) {
-      await loadArtisanOrders();
+      tasks.add(loadArtisanOrders());
     }
     if (isAdmin) {
-      await loadAdminDashboard();
+      tasks.add(loadAdminDashboard());
     }
+
+    await Future.wait(tasks);
   }
 
   Future<void> refreshCart() async {
@@ -216,7 +219,7 @@ class AppState extends ChangeNotifier {
     required double price,
     required int stock,
     required String category,
-    required String imageUrl,
+    required List<String> imageUrls,
   }) async {
     await _run(() async {
       await productService.createProduct(
@@ -225,7 +228,7 @@ class AppState extends ChangeNotifier {
         price: price,
         stock: stock,
         category: category,
-        imageUrl: imageUrl,
+        imageUrls: imageUrls,
       );
       await loadProducts();
     });
@@ -238,7 +241,7 @@ class AppState extends ChangeNotifier {
     required double price,
     required int stock,
     required String category,
-    required String imageUrl,
+    required List<String> imageUrls,
   }) async {
     await _run(() async {
       await productService.updateProduct(
@@ -248,7 +251,7 @@ class AppState extends ChangeNotifier {
         price: price,
         stock: stock,
         category: category,
-        imageUrl: imageUrl,
+        imageUrls: imageUrls,
       );
       await loadProducts();
     });

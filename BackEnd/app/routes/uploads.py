@@ -8,7 +8,7 @@ from app.services.deps import require_roles
 router = APIRouter(prefix='/uploads', tags=['uploads'])
 
 ALLOWED_SUFFIXES = {'.jpg', '.jpeg', '.png', '.webp'}
-MAX_FILE_SIZE = 5 * 1024 * 1024
+MAX_FILE_SIZE = 5 * 2048 * 2048
 UPLOAD_DIR = Path('uploads')
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -23,7 +23,7 @@ async def upload_image(file: UploadFile = File(...), user=Depends(require_roles(
     if not data:
         raise HTTPException(status_code=400, detail='Empty file upload')
     if len(data) > MAX_FILE_SIZE:
-        raise HTTPException(status_code=400, detail='Image must be 5MB or smaller')
+        raise HTTPException(status_code=400, detail='Image must be 20MB or smaller')
 
     safe_name = f"{token_hex(16)}{suffix}"
     destination = UPLOAD_DIR / safe_name

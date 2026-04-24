@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
 
@@ -71,73 +72,79 @@ class ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppTheme.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                child: Image.network(
-                  product.imageUrl,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: Colors.grey.shade200,
-                    child: const Icon(Icons.image, color: Colors.grey),
+    return RepaintBoundary(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppTheme.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                  child: CachedNetworkImage(
+                    imageUrl: product.imageUrls.isNotEmpty ? product.imageUrls.first : '',
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    placeholder: (context, url) => Container(
+                      color: Colors.grey.shade200,
+                      child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: Colors.grey.shade200,
+                      child: const Icon(Icons.image, color: Colors.grey),
+                    ),
                   ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(product.name,
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis),
-                      ),
-                      GestureDetector(
-                        onTap: onAddToCart,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade400),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.add, size: 16, color: Colors.grey),
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(product.name,
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      StarRating(rating: product.rating),
-                      const Spacer(),
-                      Text(
-                        '${product.currency}${product.price.toStringAsFixed(0)}',
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.darkText),
-                      ),
-                    ],
-                  ),
-                ],
+                        GestureDetector(
+                          onTap: onAddToCart,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade400),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.add, size: 16, color: Colors.grey),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        StarRating(rating: product.rating),
+                        const Spacer(),
+                        Text(
+                          '${product.currency}${product.price.toStringAsFixed(0)}',
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.darkText),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

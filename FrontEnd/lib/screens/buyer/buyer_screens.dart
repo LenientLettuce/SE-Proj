@@ -177,16 +177,24 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                             ),
                           ),
                           Padding(
-                            padding: const EdgeInsets.all(8),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(p.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                Row(children: [
-                                  const Icon(Icons.star, color: AppTheme.starYellow, size: 13),
-                                  Text(' ${p.rating}  ', style: const TextStyle(fontSize: 12)),
-                                  Text('\$${p.price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                                ]),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.star, color: AppTheme.starYellow, size: 13),
+                                    Text(' ${p.rating} ', style: const TextStyle(fontSize: 11)),
+                                    const Spacer(),
+                                    Text(
+                                      '\$${p.price.toStringAsFixed(0)}',
+                                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                                      textAlign: TextAlign.right,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
                           ),
