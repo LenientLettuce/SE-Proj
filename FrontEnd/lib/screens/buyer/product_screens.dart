@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/widgets.dart';
 import '../../models/models.dart';
+import '../../state/app_state.dart';
 
 
 // ── Product Detail Screen (Buyer) ─────────────────────────────────────────────
@@ -19,10 +21,80 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   String _selectedSize = 'M';
   int _selectedColor = 1;
   int _currentImageIndex = 0;
+  final PageController _pageController = PageController();
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _showAddReviewDialog() {
+    final commentController = TextEditingController();
+    double rating = 5.0;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Add Review'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) => IconButton(
+                  icon: Icon(
+                    index < rating ? Icons.star : Icons.star_border,
+                    color: AppTheme.starYellow,
+                  ),
+                  onPressed: () => setDialogState(() => rating = index + 1.0),
+                )),
+              ),
+              TextField(
+                controller: commentController,
+                decoration: const InputDecoration(hintText: 'Write your comment...'),
+                maxLines: 3,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () async {
+                try {
+                  await context.read<AppState>().addReview(
+                    widget.product.id,
+                    rating: rating,
+                    comment: commentController.text,
+                  );
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Review added successfully!')),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error: $e')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Submit'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final p = widget.product;
+    final state = context.watch<AppState>();
+    // Find product in state to get fresh review data
+    final p = state.products.firstWhere((element) => element.id == widget.product.id, orElse: () => widget.product);
     final totalPrice = p.price * _qty;
     final sizes = p.sizes.isNotEmpty ? p.sizes : ['XS', 'S', 'M', 'L', 'XL'];
     final colors = [
@@ -30,6 +102,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       AppTheme.primaryRed,
       const Color(0xFFF5DEB3)
     ];
+
+    // Check if customer has a completed order for this product
+    final bool canReview = state.orders.any((order) => 
+      order.status.toLowerCase() == 'completed' && 
+      order.items.any((item) => item.productId == p.id)
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -46,6 +124,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               child: Stack(
                 children: [
                   PageView.builder(
+                    controller: _pageController,
                     itemCount: p.imageUrls.length,
                     onPageChanged: (index) => setState(() => _currentImageIndex = index),
                     itemBuilder: (context, index) => CachedNetworkImage(
@@ -92,7 +171,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     scrollDirection: Axis.horizontal,
                     itemCount: p.imageUrls.length,
                     itemBuilder: (context, index) => GestureDetector(
-                      onTap: () => setState(() => _currentImageIndex = index),
+                      onTap: () {
+                        setState(() => _currentImageIndex = index);
+                        _pageController.animateToPage(index, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                      },
                       child: Container(
                         width: 60,
                         margin: const EdgeInsets.only(right: 8),
@@ -246,25 +328,71 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   const SizedBox(height: 16),
 
                   // Reviews
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Reviews (${p.reviews.length})',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 15)),
+                      if (canReview)
+                        TextButton(
+                          onPressed: _showAddReviewDialog,
+                          child: const Text('Add Review'),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (p.reviews.isEmpty)
+                    const Text('No reviews yet.', style: TextStyle(color: Colors.grey, fontSize: 13))
+                  else
+                    ...p.reviews.take(3).map((r) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              StarRating(rating: r.rating, size: 12),
+                              const SizedBox(width: 8),
+                              Text(r.userName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(r.comment, style: const TextStyle(fontSize: 12)),
+                        ],
+                      ),
+                    )),
                   GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, '/reviews'),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Reviews (${p.reviewCount})',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 15)),
-                        const Icon(Icons.chevron_right),
-                      ],
-                    ),
+                    onTap: () => Navigator.pushNamed(context, '/reviews', arguments: p.reviews),
+                    child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('View All Reviews',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w600, fontSize: 13, color: Colors.blue)),
+                          Icon(Icons.chevron_right, size: 20, color: Colors.blue),
+                        ]),
                   ),
                   const Divider(height: 24),
                   const SizedBox(height: 8),
                   NavyButton(
                     label: 'Add to cart',
                     icon: Icons.shopping_cart_outlined,
-                    onPressed: () {
-                      
+                    onPressed: () async {
+                      try {
+                        await context.read<AppState>().addToCart(p, quantity: _qty);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Added to cart!')),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
+                        }
+                      }
                     },
                   ),
                 ],
@@ -273,7 +401,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: AppBottomNavBar(currentIndex: 0, onTap: (_) {},),
+      bottomNavigationBar: AppBottomNavBar(
+        currentIndex: 0,
+        onTap: (index) {
+          if (index == 0) Navigator.pushReplacementNamed(context, '/home');
+          if (index == 1) Navigator.pushReplacementNamed(context, '/catalog');
+          if (index == 3) Navigator.pushNamed(context, '/cart');
+        },
+      ),
     );
   }
 }
@@ -301,13 +436,28 @@ class _QtyButton extends StatelessWidget {
 }
 
 // ── Seller Product Detail ──────────────────────────────────────────────────────
-class SellerProductDetailScreen extends StatelessWidget {
+class SellerProductDetailScreen extends StatefulWidget {
   final Product product;
   const SellerProductDetailScreen({super.key, required this.product});
 
   @override
+  State<SellerProductDetailScreen> createState() => _SellerProductDetailScreenState();
+}
+
+class _SellerProductDetailScreenState extends State<SellerProductDetailScreen> {
+  int _currentImageIndex = 0;
+  final PageController _pageController = PageController();
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final p = product;
+    final state = context.watch<AppState>();
+    final p = state.products.firstWhere((element) => element.id == widget.product.id, orElse: () => widget.product);
     final colors = [
       const Color(0xFF8B6914),
       AppTheme.primaryRed,
@@ -346,7 +496,9 @@ class SellerProductDetailScreen extends StatelessWidget {
               child: Stack(
                 children: [
                   PageView.builder(
+                    controller: _pageController,
                     itemCount: p.imageUrls.length,
+                    onPageChanged: (index) => setState(() => _currentImageIndex = index),
                     itemBuilder: (context, index) => CachedNetworkImage(
                       imageUrl: p.imageUrls[index],
                       width: double.infinity,
@@ -356,6 +508,27 @@ class SellerProductDetailScreen extends StatelessWidget {
                       errorWidget: (context, url, error) => Container(color: Colors.grey[200], child: const Icon(Icons.error)),
                     ),
                   ),
+                  if (p.imageUrls.length > 1)
+                    Positioned(
+                      bottom: 16,
+                      left: 0,
+                      right: 0,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          p.imageUrls.length,
+                          (index) => Container(
+                            width: 8,
+                            height: 8,
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _currentImageIndex == index ? AppTheme.primaryRed : Colors.white70,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -367,14 +540,27 @@ class SellerProductDetailScreen extends StatelessWidget {
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: p.imageUrls.length,
-                    itemBuilder: (context, index) => Container(
-                      width: 60,
-                      margin: const EdgeInsets.only(right: 8),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: CachedNetworkImage(
-                          imageUrl: p.imageUrls[index],
-                          fit: BoxFit.cover,
+                    itemBuilder: (context, index) => GestureDetector(
+                      onTap: () {
+                        setState(() => _currentImageIndex = index);
+                        _pageController.animateToPage(index, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                      },
+                      child: Container(
+                        width: 60,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: _currentImageIndex == index ? AppTheme.primaryRed : Colors.transparent,
+                            width: 2,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: CachedNetworkImage(
+                            imageUrl: p.imageUrls[index],
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
                     ),
@@ -450,14 +636,14 @@ class SellerProductDetailScreen extends StatelessWidget {
                           .toList()),
                   const SizedBox(height: 14),
                   GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, '/reviews'),
-                    child: Row(
+                    onTap: () => Navigator.pushNamed(context, '/reviews', arguments: p.reviews),
+                    child: const Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Reviews (${p.reviewCount})',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w600, fontSize: 15)),
-                          const Icon(Icons.chevron_right),
+                          Text('View All Reviews',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w600, fontSize: 13, color: Colors.blue)),
+                          Icon(Icons.chevron_right, size: 20, color: Colors.blue),
                         ]),
                   ),
                   const Divider(height: 24),
@@ -467,7 +653,7 @@ class SellerProductDetailScreen extends StatelessWidget {
                     icon: Icons.edit_outlined,
                     onPressed: () => Navigator.pushNamed(
                         context, '/edit-product',
-                        arguments: product),
+                        arguments: p),
                   ),
                 ],
               ),
@@ -477,164 +663,6 @@ class SellerProductDetailScreen extends StatelessWidget {
       ),
       bottomNavigationBar:
           AppBottomNavBar(currentIndex: 0, isSeller: true, onTap: (_) {}),
-    );
-  }
-}
-
-// ── Checkout Screen ───────────────────────────────────────────────────────────
-class CheckoutScreen extends StatelessWidget {
-  const CheckoutScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final items = [
-      {
-        'name': 'Red Persian Rug',
-        'price': 'Rs.70,000',
-        'qty': 'x2',
-        'img':
-            'https://images.unsplash.com/photo-1600166898405-da9535204843?w=200',
-        'sub': ''
-      },
-      {
-        'name': 'Crockery Set',
-        'price': 'Rs. 10,000',
-        'qty': 'x1',
-        'img':
-            'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=200',
-        'sub': ''
-      },
-      {
-        'name': 'Coffee Mug',
-        'price': 'Rs. 1000',
-        'qty': 'x1',
-        'img':
-            'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=200',
-        'sub': 'Consequat ex eu'
-      },
-      {
-        'name': 'Clay Plate',
-        'price': 'Rs.2000',
-        'qty': 'x1',
-        'img':
-            'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200',
-        'sub': 'Consequat ex eu'
-      },
-    ];
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Checkout'),
-        actions: const [ProfileAvatarButton()],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Cart items
-            ...items.map((item) => Container(
-                  margin: const EdgeInsets.only(bottom: 14),
-                  child: Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(item['img']!,
-                            width: 72,
-                            height: 72,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                                width: 72,
-                                height: 72,
-                                color: Colors.grey.shade200)),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(item['name']!,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14)),
-                              if (item['sub']!.isNotEmpty)
-                                Text(item['sub']!,
-                                    style: TextStyle(
-                                        color: Colors.grey.shade500,
-                                        fontSize: 12)),
-                              const SizedBox(height: 4),
-                              Text(item['price']!,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 14)),
-                            ]),
-                      ),
-                      Column(children: [
-                        Icon(Icons.edit_outlined,
-                            size: 18, color: Colors.grey.shade500),
-                        const SizedBox(height: 12),
-                        Text(item['qty']!,
-                            style: TextStyle(
-                                color: Colors.grey.shade600, fontSize: 13)),
-                      ]),
-                    ],
-                  ),
-                )),
-            const Divider(height: 24),
-
-            // Voucher
-            const Text('Voucher',
-                style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
-            const SizedBox(height: 8),
-            Row(children: [
-              Expanded(
-                child: TextFormField(
-                  decoration: InputDecoration(
-                    hintText: 'Enter voucher code',
-                    hintStyle: TextStyle(color: Colors.grey.shade400),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.grey.shade300)),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.grey.shade300)),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text('Apply',
-                  style: TextStyle(
-                      color: Colors.grey.shade400,
-                      fontWeight: FontWeight.w600)),
-            ]),
-            const SizedBox(height: 20),
-
-            // Total
-            const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('TOTAL',
-                      style:
-                          TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                  Text('Rs.83,000',
-                      style:
-                          TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
-                ]),
-            const SizedBox(height: 20),
-
-            // Pay button
-            NavyButton(
-              label: 'Make Payment',
-              icon: Icons.arrow_forward,
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Payment processed!'))),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: AppBottomNavBar(currentIndex: 3, onTap: (_) {}),
     );
   }
 }

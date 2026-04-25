@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 import '../models/models.dart';
 import '../state/app_state.dart';
+import '../widgets/widgets.dart';
 import 'buyer/product_screens.dart';
 
 class RootScreen extends StatelessWidget {
@@ -44,6 +45,18 @@ class _AuthScreenState extends State<AuthScreen> {
   final _city = TextEditingController();
   String _role = 'customer';
   bool _isLogin = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fill login if coming from a logout
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final state = context.read<AppState>();
+      if (state.error != null) {
+         // keep error if any
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -92,7 +105,11 @@ class _AuthScreenState extends State<AuthScreen> {
                       ButtonSegment(value: false, label: Text('Register')),
                     ],
                     selected: {_isLogin},
-                    onSelectionChanged: (value) => setState(() => _isLogin = value.first),
+                    onSelectionChanged: (value) {
+                      setState(() => _isLogin = value.first);
+                      // Clear error when switching modes
+                      state.logout(); // logout() clears error and resets state
+                    },
                   ),
                   const SizedBox(height: 20),
                   if (state.error != null)
@@ -261,11 +278,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         title: Text('Welcome, ${state.user?.fullName.split(' ').first ?? 'Customer'}'),
         actions: [
           IconButton(
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen())),
-            icon: Badge.count(count: state.cart.items.length, child: const Icon(Icons.shopping_cart_outlined)),
+            onPressed: () {
+              Navigator.popUntil(context, (route) => route.isFirst);
+              context.read<AppState>().logout();
+            },
+            icon: const Icon(Icons.logout),
           ),
-          IconButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OrdersScreen())), icon: const Icon(Icons.receipt_long_outlined)),
-          IconButton(onPressed: () => context.read<AppState>().logout(), icon: const Icon(Icons.logout)),
         ],
       ),
       body: RefreshIndicator(
@@ -354,61 +372,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           ],
         ),
       ),
-    );
-  }
-}
-
-class ProductDetailScreen extends StatelessWidget {
-  const ProductDetailScreen({super.key, required this.product});
-
-  final Product product;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(product.name)),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Container(
-            height: 220,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(16),
-              image: product.imageUrl.isEmpty ? null : DecorationImage(image: NetworkImage(product.imageUrl), fit: BoxFit.cover),
-            ),
-            child: product.imageUrl.isEmpty ? const Icon(Icons.image, size: 50) : null,
-          ),
-          const SizedBox(height: 16),
-          Text(product.name, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text('Rs ${product.price.toStringAsFixed(0)}', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          Text('By ${product.artisanName}'),
-          const SizedBox(height: 8),
-          Text('Category: ${product.category}'),
-          const SizedBox(height: 8),
-          Text('Stock: ${product.stock}'),
-          const SizedBox(height: 16),
-          Text(product.description.isEmpty ? 'No description yet.' : product.description),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: product.stock <= 0
-                ? null
-                : () async {
-                    try {
-                      await context.read<AppState>().addToCart(product);
-                      if (!context.mounted) return;
-                      _showSnack(context, 'Added to cart');
-                    } catch (e) {
-                      if (!context.mounted) return;
-                      _showSnack(context, e.toString().replaceFirst('Exception: ', ''));
-                    }
-                  },
-            icon: const Icon(Icons.shopping_cart_checkout),
-            label: const Text('Add to cart'),
-          ),
-        ],
+      bottomNavigationBar: AppBottomNavBar(
+        currentIndex: 0,
+        onTap: (i) {
+          if (i == 0) Navigator.pushReplacementNamed(context, '/home');
+          if (i == 1) Navigator.pushNamed(context, '/catalog');
+          if (i == 2) Navigator.pushNamed(context, '/profile');
+          if (i == 3) Navigator.pushNamed(context, '/cart');
+        },
       ),
     );
   }
@@ -624,7 +595,13 @@ class _ArtisanHomeScreenState extends State<ArtisanHomeScreen> with SingleTicker
             onPressed: () => Navigator.pushNamed(context, '/edit-product'),
             icon: const Icon(Icons.add_box_outlined),
           ),
-          IconButton(onPressed: () => context.read<AppState>().logout(), icon: const Icon(Icons.logout)),
+          IconButton(
+            onPressed: () {
+              Navigator.popUntil(context, (route) => route.isFirst);
+              context.read<AppState>().logout();
+            },
+            icon: const Icon(Icons.logout),
+          ),
         ],
       ),
       body: TabBarView(
@@ -748,7 +725,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Portal'),
-        actions: [IconButton(onPressed: () => context.read<AppState>().logout(), icon: const Icon(Icons.logout))],
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.popUntil(context, (route) => route.isFirst);
+              context.read<AppState>().logout();
+            },
+            icon: const Icon(Icons.logout),
+          )
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () => context.read<AppState>().loadAdminDashboard(),

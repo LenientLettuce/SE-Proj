@@ -119,6 +119,61 @@ class AppState extends ChangeNotifier {
     });
   }
 
+  Future<void> updateProfile({
+    String? fullName,
+    String? phone,
+    String? address,
+    String? city,
+    String? postalCode,
+    String? email,
+    String? password,
+    String? bio,
+    String? profilePicture,
+  }) async {
+    await _run(() async {
+      final updatedUser = await authService.updateMe({
+        if (fullName != null) 'full_name': fullName,
+        if (phone != null) 'phone': phone,
+        if (address != null) 'address': address,
+        if (city != null) 'city': city,
+        if (postalCode != null) 'postal_code': postalCode,
+        if (email != null) 'email': email,
+        if (password != null) 'password': password,
+        if (bio != null) 'bio': bio,
+        if (profilePicture != null) 'profile_picture': profilePicture,
+      });
+      user = updatedUser;
+      await sessionStore.save(token: token!, user: user!);
+      notifyListeners();
+    });
+  }
+
+  Future<String> uploadProfilePicture(XFile file) async {
+    isUploadingImage = true;
+    error = null;
+    notifyListeners();
+    try {
+      final service = ImageUploadService(baseUrl: _baseUrl, token: token);
+      final relativeUrl = await service.uploadProductImage(file); // Reusing product upload for now or specialized
+      final fullUrl = relativeUrl.startsWith('http') ? relativeUrl : '$_baseUrl$relativeUrl';
+      await updateProfile(profilePicture: fullUrl);
+      return fullUrl;
+    } catch (e) {
+      error = e.toString().replaceFirst('Exception: ', '');
+      rethrow;
+    } finally {
+      isUploadingImage = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadProfile() async {
+    await _run(() async {
+      user = await authService.getMe();
+      await sessionStore.save(token: token!, user: user!);
+    }, silent: true);
+  }
+
   Future<String> uploadProductImage(XFile file) async {
     isUploadingImage = true;
     error = null;
@@ -170,9 +225,9 @@ class AppState extends ChangeNotifier {
     }, silent: true);
   }
 
-  Future<void> addToCart(Product product) async {
+  Future<void> addToCart(Product product, {int quantity = 1}) async {
     await _run(() async {
-      cart = await cartService.addToCart(product.id);
+      cart = await cartService.addToCart(product.id, quantity: quantity);
     });
   }
 
@@ -264,6 +319,14 @@ class AppState extends ChangeNotifier {
     });
   }
 
+  Future<void> addReview(String productId, {required double rating, required String comment}) async {
+    await _run(() async {
+      await productService.addReview(productId, rating: rating, comment: comment);
+      await loadProducts();
+      await loadMyOrders();
+    });
+  }
+
   Future<void> loadAdminDashboard() async {
     if (!isAdmin) return;
     await _run(() async {
@@ -272,6 +335,8 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    isBusy = false;
+    error = null;
     token = null;
     user = null;
     api.token = null;
@@ -281,7 +346,6 @@ class AppState extends ChangeNotifier {
     artisanOrders = [];
     cart = CartData(items: const [], total: 0);
     dashboard = null;
-    error = null;
     await sessionStore.clear();
     notifyListeners();
   }

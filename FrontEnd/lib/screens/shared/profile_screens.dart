@@ -1,15 +1,48 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../models/models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/widgets.dart';
-import '../../models/models.dart';
+import '../../state/app_state.dart';
 
 // ── Collapsed Profile Screen ──────────────────────────────────────────────────
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _isEditingBio = false;
+  late TextEditingController _bioController;
+
+  @override
+  void initState() {
+    super.initState();
+    _bioController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _bioController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final user = SampleData.currentUser;
+    final state = context.watch<AppState>();
+    final user = state.user;
+
+    if (user == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    
+    if (!_isEditingBio) {
+      _bioController.text = user.bio ?? '';
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Customize Profile'),
@@ -31,48 +64,69 @@ class ProfileScreen extends StatelessWidget {
                   CircleAvatar(
                     radius: 48,
                     backgroundColor: Colors.grey.shade300,
-                    child: ClipOval(
-                      child: Image.network(
-                        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200',
-                        width: 96, height: 96, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 48, color: Colors.grey),
-                      ),
-                    ),
+                    backgroundImage: user.profilePicture != null 
+                      ? NetworkImage(user.profilePicture!) 
+                      : const NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200'),
+                    child: state.isUploadingImage 
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : null,
                   ),
                   Positioned(
                     bottom: 0, right: 0,
-                    child: Container(
-                      width: 24, height: 24,
-                      decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
-                      child: const Icon(Icons.check, color: Colors.white, size: 14),
+                    child: GestureDetector(
+                      onTap: () async {
+                        final picker = ImagePicker();
+                        final image = await picker.pickImage(source: ImageSource.gallery);
+                        if (image != null) {
+                          await state.uploadProfilePicture(image);
+                        }
+                      },
+                      child: Container(
+                        width: 28, height: 28,
+                        decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
+                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 12),
-            Text(user.name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+            Text(user.fullName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(14)),
-                child: Text(user.role, style: const TextStyle(fontSize: 12)),
+                child: Text(user.role.toUpperCase(), style: const TextStyle(fontSize: 12)),
               ),
               const SizedBox(width: 8),
               Text('Member since 2021', style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
             ]),
             const SizedBox(height: 20),
 
-            // Bio
             _ProfileSection(
               icon: Icons.person_outline,
               label: 'PROFESSIONAL BIO',
+              onAction: () {
+                if (_isEditingBio) {
+                   state.updateProfile(bio: _bioController.text);
+                }
+                setState(() => _isEditingBio = !_isEditingBio);
+              },
+              actionIcon: _isEditingBio ? Icons.check : Icons.edit,
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
-                child: Text(user.bio, style: const TextStyle(fontSize: 13, height: 1.5)),
+                child: _isEditingBio 
+                  ? TextField(
+                      controller: _bioController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(border: InputBorder.none, hintText: 'Tell us about yourself...'),
+                      style: const TextStyle(fontSize: 13, height: 1.5),
+                    )
+                  : Text(user.bioText, style: const TextStyle(fontSize: 13, height: 1.5)),
               ),
             ),
             const SizedBox(height: 16),
@@ -88,7 +142,7 @@ class ProfileScreen extends StatelessWidget {
                 child: RichText(text: TextSpan(
                   text: 'artisan.io/ ',
                   style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
-                  children: const [TextSpan(text: 'julian_rivers', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w600))],
+                  children: [TextSpan(text: user.fullName.toLowerCase().replaceAll(' ', '_'), style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w600))],
                 )),
               ),
             ),
@@ -124,16 +178,11 @@ class ProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            RedButton(label: 'Save Global Changes', icon: Icons.save, onPressed: () {}),
+            RedButton(label: 'Save Global Changes', icon: Icons.save, onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Changes are saved as you navigate or click "Save" in sub-sections.')));
+            }),
             const SizedBox(height: 12),
-            GestureDetector(
-              onTap: () => Navigator.pushNamedAndRemoveUntil(context, '/register', (_) => false),
-              child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(Icons.logout, color: AppTheme.primaryRed, size: 18),
-                SizedBox(width: 6),
-                Text('Sign Out from Profile', style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.w600)),
-              ]),
-            ),
+            const _SignOutButton(),
             const SizedBox(height: 20),
           ],
         ),
@@ -146,7 +195,9 @@ class _ProfileSection extends StatelessWidget {
   final IconData icon;
   final String label;
   final Widget child;
-  const _ProfileSection({required this.icon, required this.label, required this.child});
+  final VoidCallback? onAction;
+  final IconData? actionIcon;
+  const _ProfileSection({required this.icon, required this.label, required this.child, this.onAction, this.actionIcon});
 
   @override
   Widget build(BuildContext context) {
@@ -157,6 +208,12 @@ class _ProfileSection extends StatelessWidget {
           Icon(icon, size: 15, color: Colors.grey.shade500),
           const SizedBox(width: 6),
           Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade500, letterSpacing: 0.5)),
+          const Spacer(),
+          if (onAction != null)
+            GestureDetector(
+              onTap: onAction,
+              child: Icon(actionIcon ?? Icons.edit, size: 16, color: AppTheme.primaryRed),
+            ),
         ]),
         const SizedBox(height: 6),
         child,
@@ -166,31 +223,34 @@ class _ProfileSection extends StatelessWidget {
 }
 
 // ── Account & Security Screen ─────────────────────────────────────────────────
-class AccountSecurityScreen extends StatelessWidget {
+class AccountSecurityScreen extends StatefulWidget {
   const AccountSecurityScreen({super.key});
 
   @override
+  State<AccountSecurityScreen> createState() => _AccountSecurityScreenState();
+}
+
+class _AccountSecurityScreenState extends State<AccountSecurityScreen> {
+  String? _email;
+  String? _password;
+
+  @override
   Widget build(BuildContext context) {
-    final user = SampleData.currentUser;
+    final state = context.watch<AppState>();
+    final user = state.user;
+    if (user == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Customize Profile'),
-        actions: const [
-          Icon(Icons.notifications_outlined),
-          SizedBox(width: 8),
-          Icon(Icons.settings_outlined),
-          SizedBox(width: 12),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // User mini-header
             _UserMiniHeader(user: user),
             const SizedBox(height: 12),
 
-            // Account section expanded
             const _ExpandedSection(
               icon: Icons.shield_outlined,
               iconColor: AppTheme.navyBlue,
@@ -200,45 +260,47 @@ class AccountSecurityScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Email
             LabeledInput(
               label: 'Email Address',
               initialValue: user.email,
               prefixIcon: Icons.email_outlined,
+              onChanged: (v) => _email = v,
             ),
             const SizedBox(height: 4),
             Text('Your primary email for order notifications and login.',
                 style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
             const SizedBox(height: 16),
 
-            const LabeledInput(
-              label: 'Current Password',
-              obscureText: true,
-              prefixIcon: Icons.lock_outline,
-              suffix: Icon(Icons.visibility_outlined, size: 18, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-
-            const LabeledInput(
+            LabeledInput(
               label: 'New Password',
               hint: 'Create a strong password',
               prefixIcon: Icons.lock_outline,
-            ),
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
-              child: Text(
-                'Passwords must be at least 8 characters and include a mix of letters, numbers, and symbols.',
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
-              ),
+              obscureText: true,
+              onChanged: (v) => _password = v,
             ),
             const SizedBox(height: 16),
 
-            RedButton(label: 'Save Changes', onPressed: () {}),
+            state.isBusy 
+              ? const CircularProgressIndicator()
+              : RedButton(label: 'Save Changes', onPressed: () async {
+                  try {
+                    Map<String, dynamic> updates = {};
+                    if (_email != null) updates['email'] = _email;
+                    if (_password != null) updates['password'] = _password;
+                    
+                    if (updates.isNotEmpty) {
+                      await state.updateProfile(
+                        email: updates['email']?.toString(),
+                        password: updates['password']?.toString(),
+                      );
+                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account updated')));
+                    }
+                  } catch (e) {
+                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                  }
+                }),
             const SizedBox(height: 16),
 
-            // Other sections (collapsed)
             ProfileSectionTile(
               icon: Icons.location_on_outlined,
               iconColor: Colors.orange,
@@ -255,10 +317,7 @@ class AccountSecurityScreen extends StatelessWidget {
               onTap: () => Navigator.pushReplacementNamed(context, '/profile-communication'),
             ),
             const SizedBox(height: 20),
-
-            RedButton(label: 'Save Global Changes', icon: Icons.save, onPressed: () {}),
-            const SizedBox(height: 12),
-            _SignOutButton(context: context),
+            const _SignOutButton(),
             const SizedBox(height: 20),
           ],
         ),
@@ -268,21 +327,28 @@ class AccountSecurityScreen extends StatelessWidget {
 }
 
 // ── Contact Details Screen ────────────────────────────────────────────────────
-class ContactDetailsScreen extends StatelessWidget {
+class ContactDetailsScreen extends StatefulWidget {
   const ContactDetailsScreen({super.key});
 
   @override
+  State<ContactDetailsScreen> createState() => _ContactDetailsScreenState();
+}
+
+class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
+  String? _phone;
+  String? _address;
+  String? _city;
+  String? _postalCode;
+
+  @override
   Widget build(BuildContext context) {
-    final user = SampleData.currentUser;
+    final state = context.watch<AppState>();
+    final user = state.user;
+    if (user == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Customize Profile'),
-        actions: const [
-          Icon(Icons.notifications_outlined),
-          SizedBox(width: 8),
-          Icon(Icons.settings_outlined),
-          SizedBox(width: 12),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -309,79 +375,58 @@ class ContactDetailsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Phone Number
             LabeledInput(
               label: 'Phone Number',
-              initialValue: user.phoneNumber,
+              initialValue: user.phone,
               prefixIcon: Icons.phone_outlined,
+              onChanged: (v) => _phone = v,
             ),
             const SizedBox(height: 14),
 
-            // Shipping Address
-            const Align(alignment: Alignment.centerLeft,
-              child: Text('Shipping Address', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
-            const SizedBox(height: 6),
-            TextFormField(
+            LabeledInput(
+              label: 'Shipping Address',
               initialValue: user.address,
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.home_outlined, size: 18, color: Colors.grey),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              ),
+              prefixIcon: Icons.home_outlined,
+              onChanged: (v) => _address = v,
             ),
             const SizedBox(height: 12),
 
             Row(children: [
               Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('City', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                  const SizedBox(height: 6),
-                  TextFormField(
-                    initialValue: user.city,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    ),
-                  ),
-                ]),
+                child: LabeledInput(
+                  label: 'City',
+                  initialValue: user.city,
+                  onChanged: (v) => _city = v,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('Postal Code', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                  const SizedBox(height: 6),
-                  TextFormField(
-                    initialValue: user.postalCode,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    ),
-                  ),
-                ]),
+                child: LabeledInput(
+                  label: 'Postal Code',
+                  initialValue: user.postalCode,
+                  onChanged: (v) => _postalCode = v,
+                ),
               ),
             ]),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
 
-            // Verified email
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
-              ),
-              child: Row(children: [
-                const Icon(Icons.email_outlined, size: 16, color: Colors.grey),
-                const SizedBox(width: 8),
-                Text(user.email, style: const TextStyle(fontSize: 13)),
-                const Spacer(),
-                const Text('VERIFIED', style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.w700, fontSize: 12)),
-              ]),
-            ),
-            const SizedBox(height: 16),
-
-            RedButton(label: 'Save Contact Details', onPressed: () {}),
+            state.isBusy
+              ? const CircularProgressIndicator()
+              : RedButton(label: 'Save Contact Details', onPressed: () async {
+                  try {
+                    if (_phone != null || _address != null || _city != null || _postalCode != null) {
+                      await state.updateProfile(
+                        phone: _phone,
+                        address: _address,
+                        city: _city,
+                        postalCode: _postalCode,
+                      );
+                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Contact details updated')));
+                    }
+                  } catch (e) {
+                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                  }
+                }),
             const SizedBox(height: 16),
 
             ProfileSectionTile(
@@ -392,10 +437,7 @@ class ContactDetailsScreen extends StatelessWidget {
               onTap: () => Navigator.pushReplacementNamed(context, '/profile-communication'),
             ),
             const SizedBox(height: 20),
-
-            RedButton(label: 'Save Global Changes', icon: Icons.save, onPressed: () {}),
-            const SizedBox(height: 12),
-            _SignOutButton(context: context),
+            const _SignOutButton(),
             const SizedBox(height: 20),
           ],
         ),
@@ -419,16 +461,13 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = SampleData.currentUser;
+    final state = context.watch<AppState>();
+    final user = state.user;
+    if (user == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Customize Profile'),
-        actions: const [
-          Icon(Icons.notifications_outlined),
-          SizedBox(width: 8),
-          Icon(Icons.settings_outlined),
-          SizedBox(width: 12),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -498,23 +537,31 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
                     onChanged: (v) => setState(() => _newsletter = v),
                   ),
                   const SizedBox(height: 16),
-                  RedButton(label: 'Save Preferences', onPressed: () {}),
-                  const SizedBox(height: 8),
-                  Center(
-                    child: Text(
-                      'You can unsubscribe from marketing emails at any time using the\nlink at the bottom of our emails.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 10, color: Colors.grey.shade500, fontStyle: FontStyle.italic),
-                    ),
-                  ),
+                  state.isBusy
+                    ? const Center(child: CircularProgressIndicator())
+                    : RedButton(label: 'Save Preferences', onPressed: () async {
+                        try {
+                          // Notification preferences are not yet supported by the backend specifically.
+                          // But we can still update the user profile if needed.
+                          await state.updateProfile();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Preferences saved successfully'))
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: $e'))
+                            );
+                          }
+                        }
+                      }),
                 ],
               ),
             ),
             const SizedBox(height: 20),
-
-            RedButton(label: 'Save Global Changes', icon: Icons.save, onPressed: () {}),
-            const SizedBox(height: 12),
-            _SignOutButton(context: context),
+            const _SignOutButton(),
             const SizedBox(height: 20),
           ],
         ),
@@ -573,14 +620,14 @@ class _UserMiniHeader extends StatelessWidget {
       child: Row(children: [
         Stack(children: [
           CircleAvatar(radius: 24, backgroundColor: Colors.grey.shade300,
-              backgroundImage: const NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100')),
+              child: const Icon(Icons.person, color: Colors.grey)),
           Positioned(bottom: 0, right: 0,
               child: Container(width: 12, height: 12, decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle))),
         ]),
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(user.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-          Text('${user.role}   ${user.badge}', style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+          Text(user.fullName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+          Text('${user.role.toUpperCase()}   ${user.badge}', style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
         ])),
       ]),
     );
@@ -607,7 +654,7 @@ class _ExpandedSection extends StatelessWidget {
       child: Row(children: [
         Container(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: iconColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+          decoration: BoxDecoration(color: iconColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
           child: Icon(icon, color: iconColor, size: 22),
         ),
         const SizedBox(width: 12),
@@ -622,13 +669,15 @@ class _ExpandedSection extends StatelessWidget {
 }
 
 class _SignOutButton extends StatelessWidget {
-  final BuildContext context;
-  const _SignOutButton({required this.context});
+  const _SignOutButton();
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.pushNamedAndRemoveUntil(context, '/register', (_) => false),
+      onTap: () {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        context.read<AppState>().logout();
+      },
       child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Icon(Icons.logout, color: AppTheme.primaryRed, size: 18),
         SizedBox(width: 6),

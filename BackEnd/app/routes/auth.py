@@ -1,11 +1,11 @@
 from datetime import datetime, timezone
 
 from bson import ObjectId
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.core.security import create_access_token, get_password_hash, verify_password
+from app.core.security import create_access_token, get_current_user, get_password_hash, verify_password
 from app.db.mongo import get_db
-from app.models.user import TokenResponse, UserCreate, UserLogin, UserPublic
+from app.models.user import TokenResponse, UserCreate, UserLogin, UserPublic, UserUpdate
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -45,3 +45,26 @@ def login(payload: UserLogin):
     user["_id"] = str(user["_id"])
     token = create_access_token(user["_id"], {"role": user["role"]})
     return TokenResponse(access_token=token, user=UserPublic(**user))
+
+
+@router.get("/me", response_model=UserPublic)
+def get_me(user=Depends(get_current_user)):
+    return UserPublic(**user)
+
+
+@router.patch("/me", response_model=UserPublic)
+def update_me(payload: UserUpdate, user=Depends(get_current_user)):
+    db = get_db()
+    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+
+    if "password" in updates:
+        updates["password_hash"] = get_password_hash(updates.pop("password"))
+
+    if not updates:
+        return UserPublic(**user)
+
+    updates["updated_at"] = datetime.now(timezone.utc)
+    db.users.update_one({"_id": ObjectId(user["_id"])}, {"$set": updates})
+    refreshed = db.users.find_one({"_id": ObjectId(user["_id"])})
+    refreshed["_id"] = str(refreshed["_id"])
+    return UserPublic(**refreshed)

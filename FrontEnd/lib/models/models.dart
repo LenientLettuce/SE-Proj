@@ -7,6 +7,8 @@ class UserModel {
   final String? address;
   final String? city;
   final String? postalCode;
+  final String? bio;
+  final String? profilePicture;
 
   UserModel({
     required this.id,
@@ -17,6 +19,8 @@ class UserModel {
     this.address,
     this.city,
     this.postalCode,
+    this.bio,
+    this.profilePicture,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
@@ -27,7 +31,9 @@ class UserModel {
         phone: (json['phone'] ?? json['phoneNumber'])?.toString(),
         address: json['address']?.toString(),
         city: json['city']?.toString(),
-        postalCode: json['postalCode']?.toString(),
+        postalCode: (json['postal_code'] ?? json['postalCode'])?.toString(),
+        bio: json['bio']?.toString(),
+        profilePicture: (json['profile_picture'] ?? json['profilePicture'])?.toString(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -38,12 +44,14 @@ class UserModel {
         'phone': phone,
         'address': address,
         'city': city,
-        'postalCode': postalCode,
+        'postal_code': postalCode,
+        'bio': bio,
+        'profile_picture': profilePicture,
       };
 
   // Compatibility for older screens
   String get name => fullName;
-  String get bio => 'No bio provided.';
+  String get bioText => bio ?? 'No bio provided.';
   String get badge => 'New Member';
   String? get phoneNumber => phone;
 }
@@ -59,6 +67,7 @@ class Product {
   final String category;
   final List<String> imageUrls;
   final bool isActive;
+  final List<Review> reviews;
   
   // Additional fields for UI compatibility
   final double rating;
@@ -79,6 +88,7 @@ class Product {
     required this.category,
     required this.imageUrls,
     required this.isActive,
+    this.reviews = const [],
     this.rating = 4.5,
     this.reviewCount = 0,
     this.currency = 'Rs. ',
@@ -108,6 +118,7 @@ class Product {
       category: (json['category'] ?? 'General').toString(),
       imageUrls: urls,
       isActive: (json['is_active'] ?? true) as bool,
+      reviews: (json['reviews'] as List?)?.map((e) => Review.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? [],
       rating: ((json['rating'] ?? 4.5) as num).toDouble(),
       reviewCount: (json['review_count'] ?? 0) as int,
       currency: (json['currency'] ?? 'Rs. ').toString(),
@@ -287,6 +298,14 @@ class Review {
     required this.date,
     required this.comment,
   });
+
+  factory Review.fromJson(Map<String, dynamic> json) => Review(
+        title: (json['title'] ?? '').toString(),
+        rating: ((json['rating'] ?? 0) as num).toDouble(),
+        userName: (json['user_name'] ?? json['user']?['full_name'] ?? 'Anonymous').toString(),
+        date: json['created_at'] != null ? DateTime.parse(json['created_at'].toString()) : DateTime.now(),
+        comment: (json['comment'] ?? '').toString(),
+      );
 }
 
 class Order {

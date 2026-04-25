@@ -25,9 +25,9 @@ class AppBottomNavBar extends StatelessWidget {
         const BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
         const BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
         BottomNavigationBarItem(
-          icon: const Icon(Icons.shopping_bag_outlined),
-          activeIcon: const Icon(Icons.shopping_bag),
-          label: isSeller ? 'Sell Goods' : 'Sell Goods',
+          icon: const Icon(Icons.person_outline),
+          activeIcon: const Icon(Icons.person),
+          label: 'Profile',
         ),
         const BottomNavigationBarItem(
           icon: Badge(label: Text('9'), child: Icon(Icons.shopping_cart_outlined)),
@@ -324,6 +324,7 @@ class LabeledInput extends StatelessWidget {
   final bool readOnly;
   final String? initialValue;
   final Widget? suffix;
+  final ValueChanged<String>? onChanged;
 
   const LabeledInput({
     super.key,
@@ -334,6 +335,7 @@ class LabeledInput extends StatelessWidget {
     this.readOnly = false,
     this.initialValue,
     this.suffix,
+    this.onChanged,
   });
 
   @override
@@ -347,6 +349,7 @@ class LabeledInput extends StatelessWidget {
           initialValue: initialValue,
           obscureText: obscureText,
           readOnly: readOnly,
+          onChanged: onChanged,
           decoration: InputDecoration(
             hintText: hint,
             prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: 18, color: Colors.grey) : null,
