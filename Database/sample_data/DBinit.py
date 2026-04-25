@@ -345,46 +345,38 @@ def init_db():
 # ----------------------------
 def seed():
 
-    # ---------------- USERS ----------------
+    # USERS
     users = load_file("users.json")
     db.users.insert_many(users)
     print(f"👤 Users: {len(users)}")
 
-
-    # ---------------- PRODUCTS ----------------
+    # PRODUCTS
     products = load_file("products.json")
     db.products.insert_many(products)
     print(f"🛍 Products: {len(products)}")
 
-
-    # ---------------- CARTS ----------------
+    # CARTS (all string IDs)
     carts = load_file("carts.json")
 
     for c in carts:
-        # STRING user_id
         c["user_id"] = str(c["user_id"])
 
         for item in c.get("items", []):
-            # STRING product_id
             item["product_id"] = str(item["product_id"])
 
     db.carts.insert_many(carts)
     print(f"🛒 Carts: {len(carts)}")
 
-
-    # ---------------- ORDERS ----------------
+    # ORDERS (UPDATED HERE)
     orders = load_file("orders.json")
 
     for o in orders:
-        # STRING customer_id
+        # string
         o["customer_id"] = str(o["customer_id"])
 
         for item in o.get("items", []):
-            # STRING product_id
             item["product_id"] = str(item["product_id"])
-
-            # KEEP ObjectId for artisan
-            item["artisan_id"] = ObjectId(item["artisan_id"])
+            item["artisan_id"] = str(item["artisan_id"])  # ✅ FIXED
 
     db.orders.insert_many(orders)
     print(f"📦 Orders: {len(orders)}")
