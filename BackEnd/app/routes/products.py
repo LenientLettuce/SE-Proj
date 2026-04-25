@@ -4,7 +4,7 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.db.mongo import get_db
-from app.models.product import ProductCreate, ProductListResponse, ProductPublic, ProductUpdate
+from app.models.product import ProductCreate, ProductListResponse, ProductPublic, ProductUpdate, ReviewCreate, ReviewPublic
 from app.services.deps import get_current_user, require_roles
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -88,3 +88,57 @@ def delete_product(product_id: str, user=Depends(require_roles("artisan", "admin
     if user["role"] != "admin" and str(existing["artisan_id"]) != user["_id"]:
         raise HTTPException(status_code=403, detail="You can delete only your own products")
     db.products.delete_one({"_id": ObjectId(product_id)})
+
+
+@router.post("/{product_id}/reviews", response_model=ProductPublic)
+def add_review(product_id: str, payload: ReviewCreate, user=Depends(get_current_user)):
+    db = get_db()
+    try:
+        oid = ObjectId(product_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid product ID")
+
+    product = db.products.find_one({"_id": oid})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # Check if user has a completed order for this product
+    # Note: Using customer_id to match the orders collection
+    order = db.orders.find_one({
+        "customer_id": user["_id"],
+        "status": "completed",
+        "items.product_id": product_id
+    })
+    if not order:
+        raise HTTPException(
+            status_code=403,
+            detail="Only customers who purchased this product can leave a review"
+        )
+
+    new_review = {
+        "user_id": user["_id"],
+        "user_name": user["full_name"],
+        "rating": payload.rating,
+        "comment": payload.comment,
+        "created_at": datetime.now(timezone.utc)
+    }
+
+    db.products.update_one(
+        {"_id": oid},
+        {"$push": {"reviews": new_review}}
+    )
+
+    # Update aggregate rating and review count
+    product = db.products.find_one({"_id": oid})
+    reviews = product.get("reviews", [])
+    review_count = len(reviews)
+    avg_rating = sum(r["rating"] for r in reviews) / review_count if review_count > 0 else 0.0
+
+    db.products.update_one(
+        {"_id": oid},
+        {"$set": {"rating": avg_rating, "review_count": review_count}}
+    )
+
+    # Return updated product
+    updated = db.products.find_one({"_id": oid})
+    return ProductPublic(**_serialize(updated))

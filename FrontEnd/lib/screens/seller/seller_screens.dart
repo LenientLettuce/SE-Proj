@@ -79,25 +79,42 @@ class _FinancesScreenState extends State<FinancesScreen> {
             SectionHeader(title: 'Reviews', actionLabel: 'See all',
                 onAction: () => Navigator.pushNamed(context, '/reviews')),
             const SizedBox(height: 12),
-            Container(
-              decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade200), borderRadius: BorderRadius.circular(12)),
-              child: Column(
-                children: [
-                  const _ReviewRow(
-                    name: 'Jane Cooper - Product #1',
-                    time: '12:00 PM',
-                    comment: 'Loved it!! Ordering Again!!',
-                    rating: 5.0,
+            Consumer<AppState>(
+              builder: (context, state, child) {
+                final allReviews = state.sellerProducts.expand((p) => p.reviews.map((r) => MapEntry(p.name, r))).toList();
+                allReviews.sort((a, b) => b.value.date.compareTo(a.value.date));
+                final recentReviews = allReviews.take(2).toList();
+                
+                if (recentReviews.isEmpty) {
+                  return const Center(child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Text('No reviews yet.'),
+                  ));
+                }
+
+                return Container(
+                  decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade200), borderRadius: BorderRadius.circular(12)),
+                  child: Column(
+                    children: recentReviews.asMap().entries.map((entry) {
+                      final productName = entry.value.key;
+                      final review = entry.value.value;
+                      final isLast = entry.key == recentReviews.length - 1;
+                      
+                      return Column(
+                        children: [
+                          _ReviewRow(
+                            name: '${review.userName} - $productName',
+                            time: '${review.date.hour}:${review.date.minute.toString().padLeft(2, '0')}',
+                            comment: review.comment,
+                            rating: review.rating,
+                          ),
+                          if (!isLast) Divider(height: 1, color: Colors.grey.shade200),
+                        ],
+                      );
+                    }).toList(),
                   ),
-                  Divider(height: 1, color: Colors.grey.shade200),
-                  const _ReviewRow(
-                    name: 'James Harrid - Product #3',
-                    time: '11:37 PM',
-                    comment: 'Slightly Late Delivery, but Loved it...',
-                    rating: 4.5,
-                  ),
-                ],
-              ),
+                );
+              },
             ),
             const SizedBox(height: 20),
 
@@ -492,10 +509,16 @@ class _StatusChip extends StatelessWidget {
 
 // ── Reviews Screen ─────────────────────────────────────────────────────────────
 class ReviewsScreen extends StatelessWidget {
-  const ReviewsScreen({super.key});
+  final List<Review>? reviews;
+  const ReviewsScreen({super.key, this.reviews});
 
   @override
   Widget build(BuildContext context) {
+    final displayReviews = reviews ?? SampleData.reviews;
+    final double avgRating = displayReviews.isEmpty 
+        ? 0 
+        : displayReviews.map((e) => e.rating).reduce((a, b) => a + b) / displayReviews.length;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Reviews', style: TextStyle(color: Colors.black87)),
@@ -512,7 +535,7 @@ class ReviewsScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('4.7', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w800)),
+                  Text(avgRating.toStringAsFixed(1), style: const TextStyle(fontSize: 42, fontWeight: FontWeight.w800)),
                   Text('out of 5', style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
                 ]),
                 const SizedBox(width: 16),
@@ -520,7 +543,8 @@ class ReviewsScreen extends StatelessWidget {
                   child: Column(
                     children: List.generate(5, (i) {
                       final stars = 5 - i;
-                      final fills = [0.7, 0.5, 0.3, 0.2, 0.1];
+                      final count = displayReviews.where((r) => r.rating >= stars && r.rating < stars + 1).length;
+                      final fill = displayReviews.isEmpty ? 0.0 : count / displayReviews.length;
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 2),
                         child: Row(children: [
@@ -528,7 +552,7 @@ class ReviewsScreen extends StatelessWidget {
                           ...List.generate(5 - stars, (_) => Icon(Icons.star_border, color: Colors.grey.shade300, size: 12)),
                           const SizedBox(width: 6),
                           Expanded(child: LinearProgressIndicator(
-                            value: fills[i],
+                            value: fill,
                             backgroundColor: Colors.grey.shade200,
                             valueColor: AlwaysStoppedAnimation<Color>(Colors.grey.shade500),
                             minHeight: 6,
@@ -541,22 +565,25 @@ class ReviewsScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 4),
-            Align(alignment: Alignment.centerRight, child: Text('26 Ratings', style: TextStyle(color: Colors.grey.shade500, fontSize: 12))),
+            Align(alignment: Alignment.centerRight, child: Text('${displayReviews.length} Ratings', style: TextStyle(color: Colors.grey.shade500, fontSize: 12))),
             const SizedBox(height: 12),
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(5, (i) =>
-              Icon(i < 4 ? Icons.star : Icons.star_half, color: AppTheme.starYellow, size: 34))),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(5, (i) {
+              if (i < avgRating.floor()) return const Icon(Icons.star, color: AppTheme.starYellow, size: 34);
+              if (i < avgRating) return const Icon(Icons.star_half, color: AppTheme.starYellow, size: 34);
+              return const Icon(Icons.star_border, color: AppTheme.starYellow, size: 34);
+            })),
             const Divider(height: 32),
 
             // Sort
             Row(children: [
               Text('Sort by: ', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
-              const Text('Unreplied', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+              const Text('Recent', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
               const Icon(Icons.keyboard_arrow_down, size: 18),
             ]),
             const Divider(height: 20),
 
             // Reviews list
-            ...SampleData.reviews.map((r) => _ReviewItem(review: r)),
+            ...displayReviews.map((r) => _ReviewItem(review: r)),
           ],
         ),
       ),

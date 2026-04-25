@@ -211,10 +211,10 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: _navIndex,
         onTap: (i) {
-          setState(() => _navIndex = i);
+          if (i == 0) Navigator.pushReplacementNamed(context, '/home');
           if (i == 1) Navigator.pushNamed(context, '/catalog');
-          if (i == 2) Navigator.pushNamed(context, '/sell-product');
-          if (i == 3) Navigator.pushNamed(context, '/checkout');
+          if (i == 2) Navigator.pushNamed(context, '/edit-product');
+          if (i == 3) Navigator.pushNamed(context, '/cart');
         },
       ),
     );
@@ -343,7 +343,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: AppBottomNavBar(currentIndex: 1, onTap: (_) {}),
+      bottomNavigationBar: AppBottomNavBar(
+        currentIndex: 1,
+        onTap: (i) {
+          if (i == 0) Navigator.pushReplacementNamed(context, '/home');
+          if (i == 1) Navigator.pushReplacementNamed(context, '/catalog');
+          if (i == 3) Navigator.pushNamed(context, '/cart');
+        },
+      ),
     );
   }
 }
@@ -437,7 +444,14 @@ class ShopsScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: AppBottomNavBar(currentIndex: 0, onTap: (_) {}),
+      bottomNavigationBar: AppBottomNavBar(
+        currentIndex: 0,
+        onTap: (i) {
+          if (i == 0) Navigator.pushReplacementNamed(context, '/home');
+          if (i == 1) Navigator.pushNamed(context, '/catalog');
+          if (i == 3) Navigator.pushNamed(context, '/cart');
+        },
+      ),
     );
   }
 }
@@ -550,7 +564,14 @@ class ViewShopScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: AppBottomNavBar(currentIndex: 0, onTap: (_) {}),
+      bottomNavigationBar: AppBottomNavBar(
+        currentIndex: 0,
+        onTap: (i) {
+          if (i == 0) Navigator.pushReplacementNamed(context, '/home');
+          if (i == 1) Navigator.pushNamed(context, '/catalog');
+          if (i == 3) Navigator.pushNamed(context, '/cart');
+        },
+      ),
     );
   }
 }
@@ -627,7 +648,14 @@ class AboutUsScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: AppBottomNavBar(currentIndex: 0, onTap: (_) {}),
+      bottomNavigationBar: AppBottomNavBar(
+        currentIndex: 0,
+        onTap: (i) {
+          if (i == 0) Navigator.pushReplacementNamed(context, '/home');
+          if (i == 1) Navigator.pushNamed(context, '/catalog');
+          if (i == 3) Navigator.pushNamed(context, '/cart');
+        },
+      ),
     );
   }
 }

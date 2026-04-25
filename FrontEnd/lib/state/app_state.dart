@@ -170,9 +170,9 @@ class AppState extends ChangeNotifier {
     }, silent: true);
   }
 
-  Future<void> addToCart(Product product) async {
+  Future<void> addToCart(Product product, {int quantity = 1}) async {
     await _run(() async {
-      cart = await cartService.addToCart(product.id);
+      cart = await cartService.addToCart(product.id, quantity: quantity);
     });
   }
 
@@ -261,6 +261,14 @@ class AppState extends ChangeNotifier {
     await _run(() async {
       await productService.deleteProduct(id);
       await loadProducts();
+    });
+  }
+
+  Future<void> addReview(String productId, {required double rating, required String comment}) async {
+    await _run(() async {
+      await productService.addReview(productId, rating: rating, comment: comment);
+      await loadProducts();
+      await loadMyOrders();
     });
   }
 

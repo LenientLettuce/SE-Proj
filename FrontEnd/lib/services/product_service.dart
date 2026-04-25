@@ -61,4 +61,11 @@ class ProductService {
   Future<void> deleteProduct(String id) async {
     await api.deleteJson('/api/v1/products/$id');
   }
+
+  Future<void> addReview(String productId, {required double rating, required String comment}) async {
+    await api.postJson('/api/v1/products/$productId/reviews', {
+      'rating': rating,
+      'comment': comment,
+    });
+  }
 }

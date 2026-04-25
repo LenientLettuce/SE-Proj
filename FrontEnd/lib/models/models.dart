@@ -59,6 +59,7 @@ class Product {
   final String category;
   final List<String> imageUrls;
   final bool isActive;
+  final List<Review> reviews;
   
   // Additional fields for UI compatibility
   final double rating;
@@ -79,6 +80,7 @@ class Product {
     required this.category,
     required this.imageUrls,
     required this.isActive,
+    this.reviews = const [],
     this.rating = 4.5,
     this.reviewCount = 0,
     this.currency = 'Rs. ',
@@ -108,6 +110,7 @@ class Product {
       category: (json['category'] ?? 'General').toString(),
       imageUrls: urls,
       isActive: (json['is_active'] ?? true) as bool,
+      reviews: (json['reviews'] as List?)?.map((e) => Review.fromJson(Map<String, dynamic>.from(e as Map))).toList() ?? [],
       rating: ((json['rating'] ?? 4.5) as num).toDouble(),
       reviewCount: (json['review_count'] ?? 0) as int,
       currency: (json['currency'] ?? 'Rs. ').toString(),
@@ -287,6 +290,14 @@ class Review {
     required this.date,
     required this.comment,
   });
+
+  factory Review.fromJson(Map<String, dynamic> json) => Review(
+        title: (json['title'] ?? '').toString(),
+        rating: ((json['rating'] ?? 0) as num).toDouble(),
+        userName: (json['user_name'] ?? json['user']?['full_name'] ?? 'Anonymous').toString(),
+        date: json['created_at'] != null ? DateTime.parse(json['created_at'].toString()) : DateTime.now(),
+        comment: (json['comment'] ?? '').toString(),
+      );
 }
 
 class Order {

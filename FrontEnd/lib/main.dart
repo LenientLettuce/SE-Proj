@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'models/models.dart';
 import 'screens/app_screens.dart';
 import 'screens/buyer/buyer_screens.dart';
+import 'screens/buyer/product_screens.dart';
 import 'screens/seller/seller_screens.dart';
 import 'screens/shared/profile_screens.dart';
 import 'state/app_state.dart';
@@ -31,9 +32,13 @@ class ArtisansMarketplaceApp extends StatelessWidget {
           '/shops': (context) => const ShopsScreen(),
           '/about': (context) => const AboutUsScreen(),
           '/checkout': (context) => const CheckoutScreen(),
+          '/cart': (context) => const CartScreen(),
           '/finances': (context) => const FinancesScreen(),
           '/manage-orders': (context) => const ManageOrdersScreen(),
-          '/reviews': (context) => const ReviewsScreen(),
+          '/reviews': (context) {
+            final reviews = ModalRoute.of(context)?.settings.arguments as List<Review>?;
+            return ReviewsScreen(reviews: reviews);
+          },
           '/edit-product': (context) {
             final product = ModalRoute.of(context)?.settings.arguments as Product?;
             return EditProductScreen(product: product);
