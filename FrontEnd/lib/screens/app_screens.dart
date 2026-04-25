@@ -47,6 +47,18 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _isLogin = true;
 
   @override
+  void initState() {
+    super.initState();
+    // Pre-fill login if coming from a logout
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final state = context.read<AppState>();
+      if (state.error != null) {
+         // keep error if any
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _loginEmail.dispose();
     _loginPassword.dispose();
@@ -93,7 +105,11 @@ class _AuthScreenState extends State<AuthScreen> {
                       ButtonSegment(value: false, label: Text('Register')),
                     ],
                     selected: {_isLogin},
-                    onSelectionChanged: (value) => setState(() => _isLogin = value.first),
+                    onSelectionChanged: (value) {
+                      setState(() => _isLogin = value.first);
+                      // Clear error when switching modes
+                      state.logout(); // logout() clears error and resets state
+                    },
                   ),
                   const SizedBox(height: 20),
                   if (state.error != null)
@@ -261,7 +277,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       appBar: AppBar(
         title: Text('Welcome, ${state.user?.fullName.split(' ').first ?? 'Customer'}'),
         actions: [
-          IconButton(onPressed: () => context.read<AppState>().logout(), icon: const Icon(Icons.logout)),
+          IconButton(
+            onPressed: () {
+              Navigator.popUntil(context, (route) => route.isFirst);
+              context.read<AppState>().logout();
+            },
+            icon: const Icon(Icons.logout),
+          ),
         ],
       ),
       body: RefreshIndicator(
@@ -355,6 +377,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         onTap: (i) {
           if (i == 0) Navigator.pushReplacementNamed(context, '/home');
           if (i == 1) Navigator.pushNamed(context, '/catalog');
+          if (i == 2) Navigator.pushNamed(context, '/profile');
           if (i == 3) Navigator.pushNamed(context, '/cart');
         },
       ),
@@ -572,7 +595,13 @@ class _ArtisanHomeScreenState extends State<ArtisanHomeScreen> with SingleTicker
             onPressed: () => Navigator.pushNamed(context, '/edit-product'),
             icon: const Icon(Icons.add_box_outlined),
           ),
-          IconButton(onPressed: () => context.read<AppState>().logout(), icon: const Icon(Icons.logout)),
+          IconButton(
+            onPressed: () {
+              Navigator.popUntil(context, (route) => route.isFirst);
+              context.read<AppState>().logout();
+            },
+            icon: const Icon(Icons.logout),
+          ),
         ],
       ),
       body: TabBarView(
@@ -696,7 +725,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Portal'),
-        actions: [IconButton(onPressed: () => context.read<AppState>().logout(), icon: const Icon(Icons.logout))],
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.popUntil(context, (route) => route.isFirst);
+              context.read<AppState>().logout();
+            },
+            icon: const Icon(Icons.logout),
+          )
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () => context.read<AppState>().loadAdminDashboard(),

@@ -51,4 +51,14 @@ class AuthService {
       user: UserModel.fromJson(Map<String, dynamic>.from(data['user'] as Map)),
     );
   }
+
+  Future<UserModel> updateMe(Map<String, dynamic> data) async {
+    final res = await api.patchJson('/api/v1/auth/me', data);
+    return UserModel.fromJson(Map<String, dynamic>.from(res as Map));
+  }
+
+  Future<UserModel> getMe() async {
+    final res = await api.getJson('/api/v1/auth/me');
+    return UserModel.fromJson(Map<String, dynamic>.from(res as Map));
+  }
 }

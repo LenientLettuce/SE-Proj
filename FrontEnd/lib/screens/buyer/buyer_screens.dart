@@ -211,9 +211,12 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: _navIndex,
         onTap: (i) {
-          if (i == 0) Navigator.pushReplacementNamed(context, '/home');
+          if (i == 0) {
+            setState(() => _navIndex = 0);
+            Navigator.pushReplacementNamed(context, '/home');
+          }
           if (i == 1) Navigator.pushNamed(context, '/catalog');
-          if (i == 2) Navigator.pushNamed(context, '/edit-product');
+          if (i == 2) Navigator.pushNamed(context, '/profile');
           if (i == 3) Navigator.pushNamed(context, '/cart');
         },
       ),
@@ -348,6 +351,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
         onTap: (i) {
           if (i == 0) Navigator.pushReplacementNamed(context, '/home');
           if (i == 1) Navigator.pushReplacementNamed(context, '/catalog');
+          if (i == 2) Navigator.pushNamed(context, '/profile');
           if (i == 3) Navigator.pushNamed(context, '/cart');
         },
       ),
@@ -449,6 +453,7 @@ class ShopsScreen extends StatelessWidget {
         onTap: (i) {
           if (i == 0) Navigator.pushReplacementNamed(context, '/home');
           if (i == 1) Navigator.pushNamed(context, '/catalog');
+          if (i == 2) Navigator.pushNamed(context, '/profile');
           if (i == 3) Navigator.pushNamed(context, '/cart');
         },
       ),
@@ -569,6 +574,7 @@ class ViewShopScreen extends StatelessWidget {
         onTap: (i) {
           if (i == 0) Navigator.pushReplacementNamed(context, '/home');
           if (i == 1) Navigator.pushNamed(context, '/catalog');
+          if (i == 2) Navigator.pushNamed(context, '/profile');
           if (i == 3) Navigator.pushNamed(context, '/cart');
         },
       ),
@@ -653,6 +659,7 @@ class AboutUsScreen extends StatelessWidget {
         onTap: (i) {
           if (i == 0) Navigator.pushReplacementNamed(context, '/home');
           if (i == 1) Navigator.pushNamed(context, '/catalog');
+          if (i == 2) Navigator.pushNamed(context, '/profile');
           if (i == 3) Navigator.pushNamed(context, '/cart');
         },
       ),

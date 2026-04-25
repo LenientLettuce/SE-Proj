@@ -144,8 +144,8 @@ class _FinancesScreenState extends State<FinancesScreen> {
         currentIndex: _navIndex,
         isSeller: true,
         onTap: (i) {
-          setState(() => _navIndex = i);
           if (i == 0) Navigator.pushNamed(context, '/seller-home');
+          if (i == 2) Navigator.pushNamed(context, '/profile');
         },
       ),
     );
@@ -372,7 +372,14 @@ class _ManageOrdersScreenState extends State<ManageOrdersScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: AppBottomNavBar(currentIndex: 0, isSeller: true, onTap: (_) {}),
+      bottomNavigationBar: AppBottomNavBar(
+        currentIndex: 0,
+        isSeller: true,
+        onTap: (i) {
+          if (i == 0) Navigator.pushNamed(context, '/seller-home');
+          if (i == 2) Navigator.pushNamed(context, '/profile');
+        },
+      ),
     );
   }
 }
