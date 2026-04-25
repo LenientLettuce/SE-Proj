@@ -20,7 +20,7 @@ def list_products(
     search: str | None = None,
     category: str | None = None,
     skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=20, le=100),
+    limit: int = Query(default=25, le=100),
 ):
     db = get_db()
     query: dict = {"is_active": True}
