@@ -266,6 +266,7 @@ import pymongo
 import json
 import os
 from datetime import datetime
+from bson import ObjectId
 
 
 # ----------------------------
@@ -276,13 +277,13 @@ db = client["artisan-marketplace"]
 
 
 # ----------------------------
-# FIX PATH (IMPORTANT)
+# BASE PATH
 # ----------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 # ----------------------------
-# CLEAN MONGO EXTENDED JSON
+# CLEAN JSON
 # ----------------------------
 def clean(obj):
 
@@ -292,7 +293,7 @@ def clean(obj):
     if isinstance(obj, dict):
 
         if "$oid" in obj:
-            return obj["$oid"]
+            return ObjectId(obj["$oid"])
 
         if "$date" in obj:
             return datetime.fromisoformat(obj["$date"].replace("Z", "+00:00"))
@@ -303,31 +304,29 @@ def clean(obj):
 
 
 # ----------------------------
-# LOAD FILE SAFELY
+# LOAD FILE
 # ----------------------------
 def load_file(filename):
 
     path = os.path.join(BASE_DIR, filename)
 
-    print(f"\n📂 Loading: {path}")
+    print(f"\n📂 Loading: {filename}")
 
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    # handle wrapped JSON like {"users": [...]}
     if isinstance(data, dict):
-        key = list(data.keys())[0]
-        data = data[key]
+        data = list(data.values())[0]
 
     data = clean(data)
 
-    print(f"📊 Records found: {len(data)}")
+    print(f"📊 Records: {len(data)}")
 
     return data
 
 
 # ----------------------------
-# INIT COLLECTIONS
+# INIT DB
 # ----------------------------
 def init_db():
 
@@ -346,25 +345,49 @@ def init_db():
 # ----------------------------
 def seed():
 
-    # USERS
+    # ---------------- USERS ----------------
     users = load_file("users.json")
-    print("👤 inserting users:", len(users))
-    print("result:", len(db.users.insert_many(users).inserted_ids))
+    db.users.insert_many(users)
+    print(f"👤 Users: {len(users)}")
 
-    # PRODUCTS
+
+    # ---------------- PRODUCTS ----------------
     products = load_file("products.json")
-    print("🛍 inserting products:", len(products))
-    print("result:", len(db.products.insert_many(products).inserted_ids))
+    db.products.insert_many(products)
+    print(f"🛍 Products: {len(products)}")
 
-    # CARTS
+
+    # ---------------- CARTS ----------------
     carts = load_file("carts.json")
-    print("🛒 inserting carts:", len(carts))
-    print("result:", len(db.carts.insert_many(carts).inserted_ids))
 
-    # ORDERS
+    for c in carts:
+        # STRING user_id
+        c["user_id"] = str(c["user_id"])
+
+        for item in c.get("items", []):
+            # STRING product_id
+            item["product_id"] = str(item["product_id"])
+
+    db.carts.insert_many(carts)
+    print(f"🛒 Carts: {len(carts)}")
+
+
+    # ---------------- ORDERS ----------------
     orders = load_file("orders.json")
-    print("📦 inserting orders:", len(orders))
-    print("result:", len(db.orders.insert_many(orders).inserted_ids))
+
+    for o in orders:
+        # STRING customer_id
+        o["customer_id"] = str(o["customer_id"])
+
+        for item in o.get("items", []):
+            # STRING product_id
+            item["product_id"] = str(item["product_id"])
+
+            # KEEP ObjectId for artisan
+            item["artisan_id"] = ObjectId(item["artisan_id"])
+
+    db.orders.insert_many(orders)
+    print(f"📦 Orders: {len(orders)}")
 
 
 # ----------------------------
@@ -373,7 +396,6 @@ def seed():
 def verify():
 
     print("\n🔍 DATABASE CHECK")
-
     print("Users:", db.users.count_documents({}))
     print("Products:", db.products.count_documents({}))
     print("Carts:", db.carts.count_documents({}))
@@ -381,11 +403,11 @@ def verify():
 
 
 # ----------------------------
-# RUN EVERYTHING
+# RUN
 # ----------------------------
 if __name__ == "__main__":
 
-    print("\n🚀 Starting MongoDB Seeder...\n")
+    print("\n🚀 Starting Seeder...\n")
 
     init_db()
     seed()
