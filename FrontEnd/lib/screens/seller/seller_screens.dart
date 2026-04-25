@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -5,7 +7,7 @@ import '../../state/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/widgets.dart';
 import '../../models/models.dart';
-import 'dart:io';
+
 
 // ── Finances Screen ───────────────────────────────────────────────────────────
 class FinancesScreen extends StatefulWidget {
@@ -862,10 +864,56 @@ class _ImageThumbnail extends StatelessWidget {
   final XFile? file;
   final VoidCallback onRemove;
 
-  const _ImageThumbnail({this.url, this.file, required this.onRemove});
+  const _ImageThumbnail({
+    this.url,
+    this.file,
+    required this.onRemove,
+  });
 
   @override
   Widget build(BuildContext context) {
+    Widget imageWidget;
+
+    // ── CASE 1: Existing network image (from backend)
+    if (url != null) {
+      imageWidget = Image.network(
+        url!,
+        width: 120,
+        height: 120,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) =>
+            const Icon(Icons.broken_image),
+      );
+    }
+
+    // ── CASE 2: Newly picked image
+    else if (file != null) {
+      if (kIsWeb) {
+        // WEB → use bytes (NO File allowed)
+        imageWidget = Image.network(
+          file!.path,
+          width: 120,
+          height: 120,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) =>
+              const Icon(Icons.broken_image),
+        );
+      } else {
+        // MOBILE → File is OK
+        imageWidget = Image.file(
+          File(file!.path),
+          width: 120,
+          height: 120,
+          fit: BoxFit.cover,
+        );
+      }
+    }
+
+    // fallback
+    else {
+      imageWidget = const Icon(Icons.image_not_supported);
+    }
+
     return Container(
       width: 120,
       margin: const EdgeInsets.only(left: 12),
@@ -873,9 +921,7 @@ class _ImageThumbnail extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: file != null
-                ? Image.file(File(file!.path), width: 120, height: 120, fit: BoxFit.cover)
-                : Image.network(url!, width: 120, height: 120, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image)),
+            child: imageWidget,
           ),
           Positioned(
             right: 4,
@@ -884,8 +930,15 @@ class _ImageThumbnail extends StatelessWidget {
               onTap: onRemove,
               child: Container(
                 padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                child: const Icon(Icons.close, size: 16, color: Colors.white),
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.close,
+                  size: 16,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
