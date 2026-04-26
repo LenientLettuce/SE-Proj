@@ -5,7 +5,7 @@
   "name": "Red Rugs",
   "description": "Hand-woven and local",
   "price": 15000,
-  "stock": 3,
+  "stock": 5,
   "category": "Rugs",
   "image_urls": [
     "http://127.0.0.1:8000/uploads/a762403e2e6ce0b36556cd889a91ce68.jpg",
@@ -189,7 +189,7 @@
   "name": "Wooden Shelves",
   "description": "For a beautiful look in your house, office, or any place.",
   "price": 17000,
-  "stock": 4,
+  "stock": 5,
   "category": "Woodwork",
   "image_urls": [
     "http://127.0.0.1:8000/uploads/2609370673aba9adec0408a2c39483a8.jpg",
@@ -282,7 +282,7 @@
   "name": "Multani Blue Pottery",
   "description": "Multani blue pottery original",
   "price": 5000,
-  "stock": 3,
+  "stock": 5,
   "category": "Clay Items",
   "image_urls": [
     "http://127.0.0.1:8000/uploads/fa756dfaf407ec3ea0cd5559e81f97ce.jpg",
