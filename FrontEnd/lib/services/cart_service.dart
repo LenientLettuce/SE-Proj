@@ -23,4 +23,11 @@ class CartService {
     final data = await api.deleteJson('/api/v1/cart/items/$productId');
     return CartData.fromJson(data);
   }
+
+  Future<CartData> updateCartItemQuantity(String productId, int quantity) async {
+    final data = await api.patchJson('/api/v1/cart/items/$productId', {
+      'quantity': quantity,
+    });
+    return CartData.fromJson(data);
+  }
 }

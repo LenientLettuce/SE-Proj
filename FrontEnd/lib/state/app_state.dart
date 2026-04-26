@@ -535,8 +535,10 @@ class AppState extends ChangeNotifier {
       final service = ImageUploadService(baseUrl: _baseUrl, token: token);
       final relativeUrl = await service.uploadProductImage(file);
       final fullUrl = relativeUrl.startsWith('http') ? relativeUrl : '$_baseUrl$relativeUrl';
-      await updateProfile(profilePicture: fullUrl);
-      return fullUrl;
+      // Always store 127.0.0.1 in the database regardless of the environment
+      final dbUrl = fullUrl.replaceAll('10.0.2.2', '127.0.0.1');
+      await updateProfile(profilePicture: dbUrl);
+      return dbUrl;
     } catch (e) {
       error = e.toString().replaceFirst('Exception: ', '');
       rethrow;
@@ -560,8 +562,9 @@ class AppState extends ChangeNotifier {
     try {
       final service = ImageUploadService(baseUrl: _baseUrl, token: token);
       final relativeUrl = await service.uploadProductImage(file);
-      if (relativeUrl.startsWith('http')) return relativeUrl;
-      return '$_baseUrl$relativeUrl';
+      final fullUrl = relativeUrl.startsWith('http') ? relativeUrl : '$_baseUrl$relativeUrl';
+      // Always store 127.0.0.1 in the database regardless of the environment
+      return fullUrl.replaceAll('10.0.2.2', '127.0.0.1');
     } catch (e) {
       error = e.toString().replaceFirst('Exception: ', '');
       rethrow;
@@ -614,6 +617,16 @@ class AppState extends ChangeNotifier {
     await _run(() async {
       cart = await cartService.removeFromCart(productId);
     });
+  }
+
+  Future<void> updateCartQuantity(String productId, int quantity) async {
+    await _run(() async {
+      if (quantity <= 0) {
+        cart = await cartService.removeFromCart(productId);
+      } else {
+        cart = await cartService.updateCartItemQuantity(productId, quantity);
+      }
+    }, silent: true);
   }
 
   Future<void> checkout({required String paymentMethod, required String shippingAddress}) async {

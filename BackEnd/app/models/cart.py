@@ -6,6 +6,10 @@ class CartItemIn(BaseModel):
     quantity: int = Field(ge=1, default=1)
 
 
+class CartUpdate(BaseModel):
+    quantity: int = Field(ge=1)
+
+
 class CartItemOut(BaseModel):
     product_id: str
     name: str

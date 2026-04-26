@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -6,6 +7,9 @@ import '../../theme/app_theme.dart';
 import '../../widgets/widgets.dart';
 import '../../state/app_state.dart';
 import '../buyer/product_screens.dart';
+
+// Removed local _resolveImageUrl in favor of global resolveImageUrl from widgets.dart
+
 
 // ── Collapsed Profile Screen ──────────────────────────────────────────────────
 class ProfileScreen extends StatefulWidget {
@@ -65,8 +69,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   CircleAvatar(
                     radius: 48,
                     backgroundColor: Colors.grey.shade300,
-                    backgroundImage: user.profilePicture != null 
-                      ? NetworkImage(user.profilePicture!) 
+                    backgroundImage: user.profilePicture != null && user.profilePicture!.isNotEmpty
+                      ? NetworkImage(resolveImageUrl(user.profilePicture!))
                       : const NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200'),
                     child: state.isUploadingImage 
                       ? const CircularProgressIndicator(color: Colors.white)
@@ -189,6 +193,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: 'Order History',
               subtitle: 'View past orders and leave reviews',
               onTap: () => Navigator.pushNamed(context, '/orders'),
+
+
+
+
+
             ),
             const SizedBox(height: 20),
 
@@ -992,7 +1001,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                                         color: Colors.grey.shade100,
                                         child: matchedProduct != null && matchedProduct.imageUrl.isNotEmpty
                                             ? Image.network(
-                                                matchedProduct.imageUrl,
+                                                resolveImageUrl(matchedProduct.imageUrl),
                                                 fit: BoxFit.cover,
                                                 errorBuilder: (_, __, ___) =>
                                                     Icon(Icons.image_outlined, color: Colors.grey.shade400),
