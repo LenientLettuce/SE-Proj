@@ -268,6 +268,69 @@ class AdminDashboard {
       );
 }
 
+class AdminUser {
+  final String id;
+  final String fullName;
+  final String email;
+  final String role;
+  final String phone;
+  final String city;
+  final String profilePicture;
+
+  AdminUser({
+    required this.id,
+    required this.fullName,
+    required this.email,
+    required this.role,
+    required this.phone,
+    required this.city,
+    required this.profilePicture,
+  });
+
+  factory AdminUser.fromJson(Map<String, dynamic> json) => AdminUser(
+        id: (json['id'] ?? '').toString(),
+        fullName: (json['full_name'] ?? '').toString(),
+        email: (json['email'] ?? '').toString(),
+        role: (json['role'] ?? 'customer').toString(),
+        phone: (json['phone'] ?? '').toString(),
+        city: (json['city'] ?? '').toString(),
+        profilePicture: (json['profile_picture'] ?? '').toString(),
+      );
+}
+
+class ArtisanRevenue {
+  final String id;
+  final String fullName;
+  final String email;
+  final String city;
+  final String profilePicture;
+  final int productCount;
+  final int orderCount;
+  final double revenue;
+
+  ArtisanRevenue({
+    required this.id,
+    required this.fullName,
+    required this.email,
+    required this.city,
+    required this.profilePicture,
+    required this.productCount,
+    required this.orderCount,
+    required this.revenue,
+  });
+
+  factory ArtisanRevenue.fromJson(Map<String, dynamic> json) => ArtisanRevenue(
+        id: (json['id'] ?? '').toString(),
+        fullName: (json['full_name'] ?? '').toString(),
+        email: (json['email'] ?? '').toString(),
+        city: (json['city'] ?? '').toString(),
+        profilePicture: (json['profile_picture'] ?? '').toString(),
+        productCount: (json['product_count'] ?? 0) as int,
+        orderCount: (json['order_count'] ?? 0) as int,
+        revenue: ((json['revenue'] ?? 0) as num).toDouble(),
+      );
+}
+
 class Shop {
   final String id;
   final String name;
