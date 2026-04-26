@@ -928,7 +928,7 @@ class _AdminUsersTab extends StatelessWidget {
               radius: 22,
               backgroundColor: Colors.blue.shade50,
               backgroundImage: u.profilePicture.isNotEmpty
-                  ? NetworkImage(u.profilePicture)
+                  ? NetworkImage(resolveImageUrl(u.profilePicture))
                   : null,
               child: u.profilePicture.isEmpty
                   ? Text(
@@ -1056,7 +1056,7 @@ class _AdminArtisansTab extends StatelessWidget {
                   radius: 18,
                   backgroundColor: Colors.orange.shade50,
                   backgroundImage: a.profilePicture.isNotEmpty
-                      ? NetworkImage(a.profilePicture)
+                      ? NetworkImage(resolveImageUrl(a.profilePicture))
                       : null,
                   child: a.profilePicture.isEmpty
                       ? Text(
@@ -1182,7 +1182,7 @@ class _ProductThumb extends StatelessWidget {
         child: imageUrl.isEmpty
             ? const Icon(Icons.image_outlined)
             : CachedNetworkImage(
-                imageUrl: imageUrl,
+                imageUrl: resolveImageUrl(imageUrl),
                 fit: BoxFit.cover,
                 errorWidget: (_, __, ___) => const Icon(Icons.broken_image),
               ),

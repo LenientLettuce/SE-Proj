@@ -1170,7 +1170,7 @@ class _ImageThumbnail extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget imageWidget;
     if (url != null) {
-      imageWidget = Image.network(url!,
+      imageWidget = Image.network(resolveImageUrl(url!),
           width: 120,
           height: 120,
           fit: BoxFit.cover,

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -5,6 +6,8 @@ import '../../theme/app_theme.dart';
 import '../../widgets/widgets.dart';
 import '../../models/models.dart';
 import '../../state/app_state.dart';
+
+// Removed local _resolveImageUrl in favor of global resolveImageUrl from widgets.dart
 
 
 // ── Product Detail Screen (Buyer) ─────────────────────────────────────────────
@@ -161,7 +164,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     itemCount: p.imageUrls.length,
                     onPageChanged: (index) => setState(() => _currentImageIndex = index),
                     itemBuilder: (context, index) => CachedNetworkImage(
-                      imageUrl: p.imageUrls[index],
+                      imageUrl: resolveImageUrl(p.imageUrls[index]),
                       width: double.infinity,
                       height: 300,
                       fit: BoxFit.cover,
@@ -221,7 +224,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(6),
                           child: CachedNetworkImage(
-                            imageUrl: p.imageUrls[index],
+                            imageUrl: resolveImageUrl(p.imageUrls[index]),
                             fit: BoxFit.cover,
                           ),
                         ),
@@ -560,7 +563,7 @@ class _SellerProductDetailScreenState extends State<SellerProductDetailScreen> {
                     itemCount: p.imageUrls.length,
                     onPageChanged: (index) => setState(() => _currentImageIndex = index),
                     itemBuilder: (context, index) => CachedNetworkImage(
-                      imageUrl: p.imageUrls[index],
+                      imageUrl: resolveImageUrl(p.imageUrls[index]),
                       width: double.infinity,
                       height: 300,
                       fit: BoxFit.cover,
@@ -618,7 +621,7 @@ class _SellerProductDetailScreenState extends State<SellerProductDetailScreen> {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(6),
                           child: CachedNetworkImage(
-                            imageUrl: p.imageUrls[index],
+                            imageUrl: resolveImageUrl(p.imageUrls[index]),
                             fit: BoxFit.cover,
                           ),
                         ),

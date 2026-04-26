@@ -2,6 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
+
+String resolveImageUrl(String url) {
+  if (url.isEmpty) return url;
+  if (kIsWeb) return url;
+  try {
+    if (Platform.isAndroid) {
+      return url.replaceAll('127.0.0.1', '10.0.2.2').replaceAll('localhost', '10.0.2.2');
+    }
+  } catch (e) {
+    // Platform.isAndroid might throw on web, though kIsWeb check should catch it
+  }
+  return url;
+}
+
 
 // ── Bottom Nav Bar ──────────────────────────────────────────────────────────
 class AppBottomNavBar extends StatelessWidget {
@@ -88,7 +104,7 @@ class ProductCard extends StatelessWidget {
                 child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                   child: CachedNetworkImage(
-                    imageUrl: product.imageUrls.isNotEmpty ? product.imageUrls.first : '',
+                    imageUrl: product.imageUrls.isNotEmpty ? resolveImageUrl(product.imageUrls.first) : '',
                     fit: BoxFit.cover,
                     width: double.infinity,
                     placeholder: (context, url) => Container(

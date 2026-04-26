@@ -156,7 +156,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     try {
       final service = ImageUploadService(baseUrl: _baseUrl, token: token);
-      final relativeUrl = await service.uploadProductImage(file); // Reusing product upload for now or specialized
+      final relativeUrl = await service.uploadProductImage(file);
       final fullUrl = relativeUrl.startsWith('http') ? relativeUrl : '$_baseUrl$relativeUrl';
       await updateProfile(profilePicture: fullUrl);
       return fullUrl;
