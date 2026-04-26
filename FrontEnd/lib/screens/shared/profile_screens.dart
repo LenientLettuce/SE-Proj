@@ -5,6 +5,7 @@ import '../../models/models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/widgets.dart';
 import '../../state/app_state.dart';
+import '../buyer/product_screens.dart';
 
 // ── Collapsed Profile Screen ──────────────────────────────────────────────────
 class ProfileScreen extends StatefulWidget {
@@ -74,16 +75,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Positioned(
                     bottom: 0, right: 0,
                     child: GestureDetector(
-                      onTap: () async {
+                      onTap: state.isUploadingImage ? null : () async {
                         final picker = ImagePicker();
-                        final image = await picker.pickImage(source: ImageSource.gallery);
-                        if (image != null) {
-                          await state.uploadProfilePicture(image);
+                        final image = await picker.pickImage(
+                          source: ImageSource.gallery,
+                          maxWidth: 800,
+                          imageQuality: 85,
+                        );
+                        if (image != null && context.mounted) {
+                          try {
+                            await state.uploadProfilePicture(image);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Profile picture updated!')),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(state.error ?? 'Upload failed')),
+                              );
+                            }
+                          }
                         }
                       },
                       child: Container(
                         width: 28, height: 28,
-                        decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
+                        decoration: BoxDecoration(
+                          color: state.isUploadingImage ? Colors.grey : Colors.black,
+                          shape: BoxShape.circle,
+                        ),
                         child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
                       ),
                     ),
@@ -108,9 +129,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _ProfileSection(
               icon: Icons.person_outline,
               label: 'PROFESSIONAL BIO',
-              onAction: () {
+              onAction: () async {
                 if (_isEditingBio) {
-                   state.updateProfile(bio: _bioController.text);
+                  try {
+                    await state.updateProfile(bio: _bioController.text.trim());
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Bio updated!')),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(state.error ?? 'Failed to update bio')),
+                      );
+                    }
+                  }
                 }
                 setState(() => _isEditingBio = !_isEditingBio);
               },
@@ -145,6 +179,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [TextSpan(text: user.fullName.toLowerCase().replaceAll(' ', '_'), style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w600))],
                 )),
               ),
+            ),
+            const SizedBox(height: 20),
+
+            // Order History tile
+            ProfileSectionTile(
+              icon: Icons.receipt_long_outlined,
+              iconColor: const Color(0xFF7B61FF),
+              title: 'Order History',
+              subtitle: 'View past orders and leave reviews',
+              onTap: () => Navigator.pushNamed(context, '/orders'),
             ),
             const SizedBox(height: 20),
 
@@ -195,7 +239,7 @@ class _ProfileSection extends StatelessWidget {
   final IconData icon;
   final String label;
   final Widget child;
-  final VoidCallback? onAction;
+  final Future<void> Function()? onAction;
   final IconData? actionIcon;
   const _ProfileSection({required this.icon, required this.label, required this.child, this.onAction, this.actionIcon});
 
@@ -683,6 +727,377 @@ class _SignOutButton extends StatelessWidget {
         SizedBox(width: 6),
         Text('Sign Out from Profile', style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.w600, fontSize: 14)),
       ]),
+    );
+  }
+}
+
+// ── Order History Screen ──────────────────────────────────────────────────────
+class OrderHistoryScreen extends StatefulWidget {
+  const OrderHistoryScreen({super.key});
+
+  @override
+  State<OrderHistoryScreen> createState() => _OrderHistoryScreenState();
+}
+
+class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AppState>().loadMyOrders();
+    });
+  }
+
+  Color _statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'completed': return Colors.green;
+      case 'processing': return Colors.blue;
+      case 'cancelled': return Colors.red;
+      default: return Colors.orange;
+    }
+  }
+
+  IconData _statusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'completed': return Icons.check_circle_outline;
+      case 'processing': return Icons.autorenew;
+      case 'cancelled': return Icons.cancel_outlined;
+      default: return Icons.schedule;
+    }
+  }
+
+  void _showReviewDialog(BuildContext context, AppState state, String productId, String productName) {
+    final commentController = TextEditingController();
+    double rating = 5.0;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Leave a Review', style: TextStyle(fontWeight: FontWeight.w700)),
+              Text(productName,
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600, fontWeight: FontWeight.normal),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Your rating', style: TextStyle(fontSize: 13, color: Colors.grey)),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (i) => GestureDetector(
+                  onTap: () => setDialogState(() => rating = (i + 1).toDouble()),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Icon(
+                      (i + 1) <= rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                      color: const Color(0xFFFFC107),
+                      size: 36,
+                    ),
+                  ),
+                )),
+              ),
+              const SizedBox(height: 4),
+              Center(
+                child: Text(
+                  ['', 'Poor', 'Fair', 'Good', 'Great', 'Excellent!'][rating.toInt()],
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFFFC107)),
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Text('Your comment', style: TextStyle(fontSize: 13, color: Colors.grey)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: commentController,
+                decoration: InputDecoration(
+                  hintText: 'Tell others what you think...',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  contentPadding: const EdgeInsets.all(12),
+                ),
+                maxLines: 3,
+                textCapitalization: TextCapitalization.sentences,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () async {
+                if (commentController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please write a comment')),
+                  );
+                  return;
+                }
+                try {
+                  await state.addReview(productId, rating: rating, comment: commentController.text.trim());
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Review submitted! Thank you.')),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+                    );
+                  }
+                }
+              },
+              child: const Text('Submit'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final orders = state.orders;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Order History'),
+        actions: const [ProfileAvatarButton()],
+      ),
+      body: state.isBusy && orders.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : orders.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.receipt_long_outlined, size: 64, color: Colors.grey.shade300),
+                      const SizedBox(height: 16),
+                      Text('No orders yet.',
+                          style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+                      const SizedBox(height: 8),
+                      Text('Your order history will appear here.',
+                          style: TextStyle(color: Colors.grey.shade400, fontSize: 13)),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: () => Navigator.pushNamed(context, '/catalog'),
+                        child: const Text('Start Shopping'),
+                      ),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: () => state.loadMyOrders(),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: orders.length,
+                    itemBuilder: (context, index) {
+                      final order = orders[index];
+                      final statusColor = _statusColor(order.status);
+                      final statusIcon = _statusIcon(order.status);
+                      final isCompleted = order.status.toLowerCase() == 'completed';
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Colors.grey.shade200),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Order header
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Order #${order.id.length >= 8 ? order.id.substring(0, 8).toUpperCase() : order.id.toUpperCase()}',
+                                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        if (order.placedAt != null)
+                                          Text(
+                                            '${order.placedAt!.day}/${order.placedAt!.month}/${order.placedAt!.year}',
+                                            style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: statusColor.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(statusIcon, size: 13, color: statusColor),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          order.status[0].toUpperCase() + order.status.substring(1),
+                                          style: TextStyle(
+                                            color: statusColor,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const Divider(height: 1),
+
+                            // Order items
+                            ...order.items.map((item) {
+                              // Try to find the product in the loaded products list
+                              final matchedProduct = state.products
+                                  .where((p) => p.id == item.productId)
+                                  .firstOrNull;
+
+                              return Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Product thumbnail
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Container(
+                                        width: 54,
+                                        height: 54,
+                                        color: Colors.grey.shade100,
+                                        child: matchedProduct != null && matchedProduct.imageUrl.isNotEmpty
+                                            ? Image.network(
+                                                matchedProduct.imageUrl,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (_, __, ___) =>
+                                                    Icon(Icons.image_outlined, color: Colors.grey.shade400),
+                                              )
+                                            : Icon(Icons.image_outlined, color: Colors.grey.shade400),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    // Item details
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(item.name,
+                                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Qty ${item.quantity}  •  Rs ${item.lineTotal.toStringAsFixed(0)}',
+                                            style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    // Review button — only for completed orders
+                                    if (isCompleted)
+                                      GestureDetector(
+                                        onTap: () => _showReviewDialog(
+                                          context, state, item.productId, item.name),
+                                        child: Container(
+                                          margin: const EdgeInsets.only(left: 8),
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(color: AppTheme.primaryRed),
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Text(
+                                            'Review',
+                                            style: TextStyle(
+                                              color: AppTheme.primaryRed,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }),
+
+                            // Order total + address
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        if (order.shippingAddress.isNotEmpty)
+                                          Row(
+                                            children: [
+                                              Icon(Icons.location_on_outlined,
+                                                  size: 13, color: Colors.grey.shade500),
+                                              const SizedBox(width: 4),
+                                              Expanded(
+                                                child: Text(
+                                                  order.shippingAddress,
+                                                  style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        const SizedBox(height: 2),
+                                        Row(
+                                          children: [
+                                            Icon(Icons.payment_outlined,
+                                                size: 13, color: Colors.grey.shade500),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              order.paymentMethod.toUpperCase(),
+                                              style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    'Rs ${order.totalAmount.toStringAsFixed(0)}',
+                                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
     );
   }
 }

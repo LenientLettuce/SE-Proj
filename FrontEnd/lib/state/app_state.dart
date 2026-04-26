@@ -286,6 +286,7 @@ class AppState extends ChangeNotifier {
         imageUrls: imageUrls,
       );
       await loadProducts();
+      
     });
   }
 

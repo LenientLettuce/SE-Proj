@@ -47,6 +47,7 @@ class ArtisansMarketplaceApp extends StatelessWidget {
           '/profile-account': (context) => const AccountSecurityScreen(),
           '/profile-contact': (context) => const ContactDetailsScreen(),
           '/profile-communication': (context) => const CommunicationScreen(),
+          '/orders': (context) => const OrderHistoryScreen(),
         },
         onGenerateRoute: (settings) {
           if (settings.name == '/product') {

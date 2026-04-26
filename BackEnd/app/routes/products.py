@@ -20,7 +20,7 @@ def list_products(
     search: str | None = None,
     category: str | None = None,
     skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=20, le=100),
+    limit: int = Query(default=30, le=100),
 ):
     db = get_db()
     query: dict = {"is_active": True}
@@ -142,3 +142,5 @@ def add_review(product_id: str, payload: ReviewCreate, user=Depends(get_current_
     # Return updated product
     updated = db.products.find_one({"_id": oid})
     return ProductPublic(**_serialize(updated))
+
+
