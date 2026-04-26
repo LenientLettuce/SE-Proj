@@ -1285,10 +1285,25 @@ class CartScreen extends StatelessWidget {
             ...state.cart.items.map((item) => Card(
                   child: ListTile(
                     title: Text(item.name),
-                    subtitle: Text('Qty ${item.quantity} • Rs ${item.price.toStringAsFixed(0)}'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () => context.read<AppState>().removeFromCart(item.productId),
+                    subtitle: Text('Rs ${item.price.toStringAsFixed(0)} each'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.remove_circle_outline, size: 20),
+                          onPressed: () => context.read<AppState>().updateCartQuantity(item.productId, item.quantity - 1),
+                        ),
+                        Text('${item.quantity}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        IconButton(
+                          icon: const Icon(Icons.add_circle_outline, size: 20),
+                          onPressed: () => context.read<AppState>().updateCartQuantity(item.productId, item.quantity + 1),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.red),
+                          onPressed: () => context.read<AppState>().removeFromCart(item.productId),
+                        ),
+                      ],
                     ),
                   ),
                 )),
@@ -1690,7 +1705,7 @@ class _ProductThumb extends StatelessWidget {
         child: imageUrl.isEmpty
             ? const Icon(Icons.image_outlined)
             : CachedNetworkImage(
-                imageUrl: imageUrl,
+                imageUrl: resolveImageUrl(imageUrl),
                 fit: BoxFit.cover,
                 errorWidget: (_, __, ___) => const Icon(Icons.broken_image),
               ),

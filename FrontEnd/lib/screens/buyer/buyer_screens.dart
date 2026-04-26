@@ -147,7 +147,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                               ),
                               child: ClipOval(
                                 child: Image.network(
-                                  imgs[index % imgs.length],
+                                  resolveImageUrl(imgs[index % imgs.length]),
                                   fit: BoxFit.cover,
                                   errorBuilder: (_, __, ___) =>
                                       Container(color: Colors.grey.shade200),
@@ -181,12 +181,12 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                   height: 160,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    image: const DecorationImage(
+                    image: DecorationImage(
                       image: NetworkImage(
-                          'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600'),
+                          resolveImageUrl('https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600')),
                       fit: BoxFit.cover,
                       colorFilter:
-                          ColorFilter.mode(Colors.black45, BlendMode.darken),
+                          const ColorFilter.mode(Colors.black45, BlendMode.darken),
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -218,7 +218,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                   child: _InfoTile(
                     label: 'Our Mission',
                     imageUrl:
-                        'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300',
+                        resolveImageUrl('https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300'),
                     onTap: () => Navigator.pushNamed(context, '/about'),
                   ),
                 ),
@@ -227,7 +227,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen> {
                   child: _InfoTile(
                     label: 'Shops',
                     imageUrl:
-                        'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300',
+                        resolveImageUrl('https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=300'),
                     onTap: () => Navigator.pushNamed(context, '/shops'),
                   ),
                 ),
@@ -340,7 +340,7 @@ class _InfoTile extends StatelessWidget {
           height: 100,
           decoration: BoxDecoration(
             image: DecorationImage(
-              image: NetworkImage(imageUrl),
+              image: NetworkImage(resolveImageUrl(imageUrl)),
               fit: BoxFit.cover,
               colorFilter:
                   const ColorFilter.mode(Colors.black38, BlendMode.darken),
@@ -656,13 +656,13 @@ class ShopsScreen extends StatelessWidget {
               child: Container(
                 height: 160,
                 width: double.infinity,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   image: DecorationImage(
                     image: NetworkImage(
-                        'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600'),
+                        resolveImageUrl('https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600')),
                     fit: BoxFit.cover,
                     colorFilter:
-                        ColorFilter.mode(Colors.black, BlendMode.darken),
+                        const ColorFilter.mode(Colors.black, BlendMode.darken),
                   ),
                 ),
                 child: const Center(
@@ -701,7 +701,7 @@ class ShopsScreen extends StatelessWidget {
                             Expanded(
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(10),
-                                child: Image.network(shop.imageUrl,
+                                child: Image.network(resolveImageUrl(shop.imageUrl),
                                     fit: BoxFit.cover,
                                     width: double.infinity,
                                     errorBuilder: (_, __, ___) =>
@@ -729,12 +729,12 @@ class ShopsScreen extends StatelessWidget {
                     child: Container(
                       height: 80,
                       width: double.infinity,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         image: DecorationImage(
                           image: NetworkImage(
-                              'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600'),
+                              resolveImageUrl('https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600')),
                           fit: BoxFit.cover,
-                          colorFilter: ColorFilter.mode(
+                          colorFilter: const ColorFilter.mode(
                               Colors.black45, BlendMode.darken),
                         ),
                       ),
@@ -793,7 +793,7 @@ class ViewShopScreen extends StatelessWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                Image.network(shop.imageUrl,
+                Image.network(resolveImageUrl(shop.imageUrl),
                     width: double.infinity,
                     height: 140,
                     fit: BoxFit.cover,
@@ -810,7 +810,7 @@ class ViewShopScreen extends StatelessWidget {
                       border: Border.all(color: Colors.white, width: 3),
                     ),
                     child: ClipOval(
-                      child: Image.network(shop.ownerImageUrl,
+                      child: Image.network(resolveImageUrl(shop.ownerImageUrl),
                           fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => Container(
                               color: Colors.grey.shade300,
@@ -879,7 +879,7 @@ class ViewShopScreen extends StatelessWidget {
                                       borderRadius:
                                           const BorderRadius.vertical(
                                               top: Radius.circular(10)),
-                                      child: Image.network(p.imageUrl,
+                                      child: Image.network(resolveImageUrl(p.imageUrl),
                                           fit: BoxFit.cover,
                                           width: double.infinity,
                                           errorBuilder: (_, __, ___) =>
@@ -959,13 +959,13 @@ class AboutUsScreen extends StatelessWidget {
               child: Container(
                 height: 160,
                 width: double.infinity,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   image: DecorationImage(
                     image: NetworkImage(
-                        'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600'),
+                        resolveImageUrl('https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600')),
                     fit: BoxFit.cover,
                     colorFilter:
-                        ColorFilter.mode(Colors.black, BlendMode.darken),
+                        const ColorFilter.mode(Colors.black, BlendMode.darken),
                   ),
                 ),
                 child: const Padding(
@@ -1006,13 +1006,13 @@ class AboutUsScreen extends StatelessWidget {
               child: Container(
                 height: 80,
                 width: double.infinity,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   image: DecorationImage(
                     image: NetworkImage(
-                        'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600'),
+                        resolveImageUrl('https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=600')),
                     fit: BoxFit.cover,
                     colorFilter:
-                        ColorFilter.mode(Colors.black45, BlendMode.darken),
+                        const ColorFilter.mode(Colors.black45, BlendMode.darken),
                   ),
                 ),
                 child: const Center(
