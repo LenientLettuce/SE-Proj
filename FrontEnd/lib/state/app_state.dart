@@ -53,6 +53,8 @@ class AppState extends ChangeNotifier {
   List<OrderModel> artisanOrders;
   CartData cart;
   AdminDashboard? dashboard;
+  List<AdminUser> adminUsers = [];
+  List<ArtisanRevenue> artisanRevenues = [];
   final List<String> categories;
 
   bool get isLoggedIn => token != null && token!.isNotEmpty;
@@ -331,6 +333,8 @@ class AppState extends ChangeNotifier {
     if (!isAdmin) return;
     await _run(() async {
       dashboard = await adminService.dashboard();
+      adminUsers = await adminService.listUsers();
+      artisanRevenues = await adminService.artisanRevenue();
     }, silent: true);
   }
 
@@ -346,6 +350,8 @@ class AppState extends ChangeNotifier {
     artisanOrders = [];
     cart = CartData(items: const [], total: 0);
     dashboard = null;
+    adminUsers = [];
+    artisanRevenues = [];
     await sessionStore.clear();
     notifyListeners();
   }

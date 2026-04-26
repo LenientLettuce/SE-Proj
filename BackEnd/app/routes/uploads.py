@@ -14,7 +14,7 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @router.post('/image', status_code=status.HTTP_201_CREATED)
-async def upload_image(file: UploadFile = File(...), user=Depends(require_roles('artisan', 'admin'))):
+async def upload_image(file: UploadFile = File(...), user=Depends(require_roles('artisan', 'admin', 'customer'))):
     suffix = Path(file.filename or '').suffix.lower()
     if suffix not in ALLOWED_SUFFIXES:
         raise HTTPException(status_code=400, detail='Only JPG, PNG, and WEBP images are allowed')

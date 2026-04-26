@@ -1,3 +1,4 @@
+import 'package:artisans_marketplace/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -709,13 +710,23 @@ class AdminDashboardScreen extends StatefulWidget {
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
 
-class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+class _AdminDashboardScreenState extends State<AdminDashboardScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppState>().loadAdminDashboard();
     });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
@@ -724,6 +735,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final dashboard = state.dashboard;
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('Admin Portal'),
         actions: [
           IconButton(
@@ -732,35 +744,395 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               context.read<AppState>().logout();
             },
             icon: const Icon(Icons.logout),
-          )
+          ),
         ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () => context.read<AppState>().loadAdminDashboard(),
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Text('Supervisor view for marketplace activity', style: TextStyle(color: Colors.grey.shade700)),
-            const SizedBox(height: 16),
-            if (dashboard == null)
-              const Center(child: Padding(padding: EdgeInsets.only(top: 40), child: CircularProgressIndicator()))
-            else
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _StatCard(label: 'Users', value: dashboard.users.toString()),
-                  _StatCard(label: 'Artisans', value: dashboard.artisans.toString()),
-                  _StatCard(label: 'Customers', value: dashboard.customers.toString()),
-                  _StatCard(label: 'Products', value: dashboard.products.toString()),
-                  _StatCard(label: 'Orders', value: dashboard.orders.toString()),
-                  _StatCard(label: 'Revenue', value: 'Rs ${dashboard.revenue.toStringAsFixed(0)}'),
-                ],
-              ),
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white60,
+          indicatorColor: Colors.white,
+          tabs: const [
+            Tab(text: 'Overview'),
+            Tab(text: 'Customers'),
+            Tab(text: 'Artisans'),
           ],
         ),
       ),
+      body: state.isBusy && dashboard == null
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: () => state.loadAdminDashboard(),
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _AdminOverviewTab(dashboard: dashboard),
+                  _AdminUsersTab(
+                    users: state.adminUsers.where((u) => u.role == 'customer').toList(),
+                  ),
+                  _AdminArtisansTab(artisans: state.artisanRevenues),
+                ],
+              ),
+            ),
     );
+  }
+}
+
+// ── Overview Tab ─────────────────────────────────────────────────────────────
+class _AdminOverviewTab extends StatelessWidget {
+  final AdminDashboard? dashboard;
+  const _AdminOverviewTab({required this.dashboard});
+
+  @override
+  Widget build(BuildContext context) {
+    if (dashboard == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final d = dashboard!;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Marketplace Summary',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryRed,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Total Revenue',
+                  style: TextStyle(color: Colors.white70, fontSize: 14)),
+              const SizedBox(height: 8),
+              Text(
+                'Rs ${d.revenue.toStringAsFixed(0)}',
+                style: const TextStyle(
+                    color: Colors.white, fontSize: 36, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 4),
+              Text('Across ${d.orders} orders',
+                  style: const TextStyle(color: Colors.white60, fontSize: 13)),
+            ]),
+          ),
+          const SizedBox(height: 16),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.6,
+            children: [
+              _AdminStatTile(
+                  icon: Icons.people_outline,
+                  label: 'Total Users',
+                  value: d.users.toString(),
+                  color: const Color(0xFF7B61FF)),
+              _AdminStatTile(
+                  icon: Icons.store_outlined,
+                  label: 'Artisans',
+                  value: d.artisans.toString(),
+                  color: Colors.orange),
+              _AdminStatTile(
+                  icon: Icons.person_outline,
+                  label: 'Customers',
+                  value: d.customers.toString(),
+                  color: Colors.blue),
+              _AdminStatTile(
+                  icon: Icons.inventory_2_outlined,
+                  label: 'Products',
+                  value: d.products.toString(),
+                  color: Colors.green),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminStatTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+  const _AdminStatTile(
+      {required this.icon,
+      required this.label,
+      required this.value,
+      required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration:
+              BoxDecoration(color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        const SizedBox(width: 10),
+        Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(value,
+                  style: TextStyle(
+                      fontSize: 22, fontWeight: FontWeight.w800, color: color)),
+              Text(label,
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+            ]),
+      ]),
+    );
+  }
+}
+
+// ── Customers Tab ─────────────────────────────────────────────────────────────
+class _AdminUsersTab extends StatelessWidget {
+  final List<AdminUser> users;
+  const _AdminUsersTab({required this.users});
+
+  @override
+  Widget build(BuildContext context) {
+    if (users.isEmpty) {
+      return Center(
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(Icons.people_outline, size: 48, color: Colors.grey.shade300),
+        const SizedBox(height: 12),
+        Text('No customers yet.',
+            style: TextStyle(color: Colors.grey.shade500)),
+      ]));
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: users.length,
+      itemBuilder: (context, i) {
+        final u = users[i];
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
+          ),
+          child: Row(children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: Colors.blue.shade50,
+              backgroundImage: u.profilePicture.isNotEmpty
+                  ? NetworkImage(u.profilePicture)
+                  : null,
+              child: u.profilePicture.isEmpty
+                  ? Text(
+                      u.fullName.isNotEmpty ? u.fullName[0].toUpperCase() : '?',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          color: Colors.blue.shade700))
+                  : null,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Text(u.fullName,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 14)),
+                  Text(u.email,
+                      style: TextStyle(
+                          color: Colors.grey.shade500, fontSize: 12)),
+                  if (u.city.isNotEmpty)
+                    Text(u.city,
+                        style: TextStyle(
+                            color: Colors.grey.shade400, fontSize: 11)),
+                ])),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text('customer',
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blue)),
+            ),
+          ]),
+        );
+      },
+    );
+  }
+}
+
+// ── Artisans Revenue Tab ──────────────────────────────────────────────────────
+class _AdminArtisansTab extends StatelessWidget {
+  final List<ArtisanRevenue> artisans;
+  const _AdminArtisansTab({required this.artisans});
+
+  @override
+  Widget build(BuildContext context) {
+    if (artisans.isEmpty) {
+      return Center(
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(Icons.store_outlined, size: 48, color: Colors.grey.shade300),
+        const SizedBox(height: 12),
+        Text('No artisans yet.',
+            style: TextStyle(color: Colors.grey.shade500)),
+      ]));
+    }
+    final totalRevenue =
+        artisans.fold(0.0, (sum, a) => sum + a.revenue);
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+              color: AppTheme.navyBlue,
+              borderRadius: BorderRadius.circular(12)),
+          child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            const Text('Total Artisan Revenue',
+                style: TextStyle(color: Colors.white70, fontSize: 13)),
+            Text('Rs ${totalRevenue.toStringAsFixed(0)}',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18)),
+          ]),
+        ),
+        const SizedBox(height: 16),
+        ...artisans.asMap().entries.map((entry) {
+          final rank = entry.key + 1;
+          final a = entry.value;
+          final share =
+              totalRevenue > 0 ? a.revenue / totalRevenue : 0.0;
+          final rankColor = rank == 1
+              ? const Color(0xFFFFD700)
+              : rank == 2
+                  ? Colors.grey.shade400
+                  : Colors.brown.shade300;
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2))
+              ],
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                      color: rankColor, shape: BoxShape.circle),
+                  child: Center(
+                      child: Text('#$rank',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800))),
+                ),
+                const SizedBox(width: 10),
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Colors.orange.shade50,
+                  backgroundImage: a.profilePicture.isNotEmpty
+                      ? NetworkImage(a.profilePicture)
+                      : null,
+                  child: a.profilePicture.isEmpty
+                      ? Text(
+                          a.fullName.isNotEmpty
+                              ? a.fullName[0].toUpperCase()
+                              : '?',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: Colors.orange.shade700))
+                      : null,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text(a.fullName,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w700, fontSize: 14)),
+                      Text(a.email,
+                          style: TextStyle(
+                              color: Colors.grey.shade500, fontSize: 11)),
+                    ])),
+                Text('Rs ${a.revenue.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: AppTheme.primaryRed)),
+              ]),
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: share,
+                  minHeight: 6,
+                  backgroundColor: Colors.grey.shade100,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                      AppTheme.primaryRed.withValues(alpha: 0.7)),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(children: [
+                _MiniStat(
+                    icon: Icons.inventory_2_outlined,
+                    label: '${a.productCount} products'),
+                const SizedBox(width: 16),
+                _MiniStat(
+                    icon: Icons.receipt_long_outlined,
+                    label: '${a.orderCount} orders'),
+                if (a.city.isNotEmpty) ...[
+                  const SizedBox(width: 16),
+                  _MiniStat(
+                      icon: Icons.location_on_outlined, label: a.city),
+                ],
+              ]),
+            ]),
+          );
+        }),
+      ],
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _MiniStat({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, size: 13, color: Colors.grey.shade500),
+      const SizedBox(width: 3),
+      Text(label,
+          style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+    ]);
   }
 }
 

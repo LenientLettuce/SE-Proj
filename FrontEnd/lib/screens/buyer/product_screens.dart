@@ -37,47 +37,83 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Add Review'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Leave a Review', style: TextStyle(fontWeight: FontWeight.w700)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const Text('Your rating', style: TextStyle(fontSize: 13, color: Colors.grey)),
+              const SizedBox(height: 6),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (index) => IconButton(
-                  icon: Icon(
-                    index < rating ? Icons.star : Icons.star_border,
-                    color: AppTheme.starYellow,
+                children: List.generate(5, (index) => GestureDetector(
+                  onTap: () => setDialogState(() => rating = (index + 1).toDouble()),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Icon(
+                      (index + 1) <= rating ? Icons.star_rounded : Icons.star_outline_rounded,
+                      color: AppTheme.starYellow,
+                      size: 36,
+                    ),
                   ),
-                  onPressed: () => setDialogState(() => rating = index + 1.0),
                 )),
               ),
+              const SizedBox(height: 4),
+              Center(
+                child: Text(
+                  ['', 'Poor', 'Fair', 'Good', 'Great', 'Excellent!'][rating.toInt()],
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.starYellow,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Text('Your comment', style: TextStyle(fontSize: 13, color: Colors.grey)),
+              const SizedBox(height: 6),
               TextField(
                 controller: commentController,
-                decoration: const InputDecoration(hintText: 'Write your comment...'),
+                decoration: InputDecoration(
+                  hintText: 'Tell others what you think...',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  contentPadding: const EdgeInsets.all(12),
+                ),
                 maxLines: 3,
+                textCapitalization: TextCapitalization.sentences,
               ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
             TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
               onPressed: () async {
+                if (commentController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please write a comment')),
+                  );
+                  return;
+                }
                 try {
                   await context.read<AppState>().addReview(
                     widget.product.id,
                     rating: rating,
-                    comment: commentController.text,
+                    comment: commentController.text.trim(),
                   );
                   if (context.mounted) {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Review added successfully!')),
+                      const SnackBar(content: Text('Review submitted! Thank you.')),
                     );
                   }
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: $e')),
+                      SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
                     );
                   }
                 }
@@ -103,11 +139,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       const Color(0xFFF5DEB3)
     ];
 
-    // Check if customer has a completed order for this product
-    final bool canReview = state.orders.any((order) => 
-      order.status.toLowerCase() == 'completed' && 
-      order.items.any((item) => item.productId == p.id)
-    );
+    // Any logged-in customer can leave a review
+    final bool canReview = state.isCustomer;
 
     return Scaffold(
       appBar: AppBar(
@@ -343,22 +376,49 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                   const SizedBox(height: 8),
                   if (p.reviews.isEmpty)
-                    const Text('No reviews yet.', style: TextStyle(color: Colors.grey, fontSize: 13))
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      alignment: Alignment.center,
+                      child: Column(children: [
+                        Icon(Icons.rate_review_outlined, size: 32, color: Colors.grey.shade400),
+                        const SizedBox(height: 8),
+                        Text(
+                          canReview ? 'Be the first to review this product!' : 'No reviews yet.',
+                          style: const TextStyle(color: Colors.grey, fontSize: 13),
+                        ),
+                      ]),
+                    )
                   else
-                    ...p.reviews.take(3).map((r) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
+                    ...p.reviews.map((r) => Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              StarRating(rating: r.rating, size: 12),
+                              StarRating(rating: r.rating, size: 14),
                               const SizedBox(width: 8),
-                              Text(r.userName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                              Expanded(
+                                child: Text(
+                                  r.userName,
+                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Text(
+                                '${r.date.day}/${r.date.month}/${r.date.year}',
+                                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                              ),
                             ],
                           ),
-                          const SizedBox(height: 4),
-                          Text(r.comment, style: const TextStyle(fontSize: 12)),
+                          const SizedBox(height: 6),
+                          Text(r.comment, style: const TextStyle(fontSize: 13, height: 1.4)),
                         ],
                       ),
                     )),
