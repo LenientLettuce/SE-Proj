@@ -242,6 +242,16 @@ class AppState extends ChangeNotifier {
     });
   }
 
+  Future<void> updateCartQuantity(String productId, int quantity) async {
+    await _run(() async {
+      if (quantity <= 0) {
+        cart = await cartService.removeFromCart(productId);
+      } else {
+        cart = await cartService.updateCartItemQuantity(productId, quantity);
+      }
+    }, silent: true);
+  }
+
   Future<void> checkout({required String paymentMethod, required String shippingAddress}) async {
     await _run(() async {
       await orderService.checkout(paymentMethod: paymentMethod, shippingAddress: shippingAddress);

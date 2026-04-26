@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
+import '../state/app_state.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
@@ -34,20 +36,31 @@ class AppBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cart = context.watch<AppState>().cart;
+    final cartCount = cart.items.fold<int>(0, (sum, item) => sum + item.quantity);
+
     return BottomNavigationBar(
       currentIndex: currentIndex,
       onTap: onTap,
       items: [
         const BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
         const BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-        BottomNavigationBarItem(
-          icon: const Icon(Icons.person_outline),
-          activeIcon: const Icon(Icons.person),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline),
+          activeIcon: Icon(Icons.person),
           label: 'Profile',
         ),
-        const BottomNavigationBarItem(
-          icon: Badge(label: Text('9'), child: Icon(Icons.shopping_cart_outlined)),
-          activeIcon: Badge(label: Text('9'), child: Icon(Icons.shopping_cart)),
+        BottomNavigationBarItem(
+          icon: Badge(
+            label: Text('$cartCount'),
+            isLabelVisible: cartCount > 0,
+            child: const Icon(Icons.shopping_cart_outlined),
+          ),
+          activeIcon: Badge(
+            label: Text('$cartCount'),
+            isLabelVisible: cartCount > 0,
+            child: const Icon(Icons.shopping_cart),
+          ),
           label: 'Cart',
         ),
       ],

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from bson import ObjectId
 
 from app.db.mongo import get_db
-from app.models.cart import CartItemIn, CartItemOut, CartResponse
+from app.models.cart import CartItemIn, CartItemOut, CartResponse, CartUpdate
 from app.services.deps import require_roles
 
 router = APIRouter(prefix="/cart", tags=["cart"])
@@ -70,4 +70,36 @@ def remove_from_cart(product_id: str, user=Depends(require_roles("customer", "ad
     if "_id" in cart:
         db.carts.update_one({"_id": cart["_id"]}, {"$set": {"items": items}})
     cart = db.carts.find_one({"user_id": user["_id"]}) or {"items": []}
+    return _cart_to_response(db, cart)
+
+# update cart item quantity - updates the quantity of a product in the cart
+@router.patch("/items/{product_id}", response_model=CartResponse)
+def update_cart_item(product_id: str, payload: CartUpdate, user=Depends(require_roles("customer", "admin"))):
+    db = get_db()
+
+    # Verify product exists and check stock
+    product = db.products.find_one({"_id": ObjectId(product_id)})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    if payload.quantity > product.get("stock", 0):
+        raise HTTPException(status_code=400, detail=f"Only {product.get('stock')} items in stock")
+
+    cart = db.carts.find_one({"user_id": user["_id"]})
+    if not cart:
+        raise HTTPException(status_code=404, detail="Cart not found")
+
+    items = cart.get("items", [])
+    updated = False
+    for item in items:
+        if item["product_id"] == product_id:
+            item["quantity"] = payload.quantity
+            updated = True
+            break
+
+    if not updated:
+        raise HTTPException(status_code=404, detail="Item not in cart")
+
+    db.carts.update_one({"_id": cart["_id"]}, {"$set": {"items": items}})
+
     return _cart_to_response(db, cart)
